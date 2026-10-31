@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const S = {
   rooms: {}, order: [], active: null, signals: [], files: [], fragments: [],
-  started: false, paused: false, over: false, hover: null, scale: 2,
+  started: false, paused: false, over: false, hover: null,
   rt: {}, images: {}, sheets: {}, cell: null, origin: null, anims: null, generation: 0,
 };
 
@@ -173,12 +173,39 @@ const HOME = {
   glass: [661, 228, 1034, 482],                // the monitor's glass, from tools/build_screens.py
   candles: [[573, 160], [536, 186], [1207, 392], [1302, 288], [1361, 262], [1421, 302], [1403, 484]],
   title: "MARELE", typeMs: 220, t0: null,
+  keep: [847, 500],                            // the point every crop stays centred on
+  buttons: [836, 696, 276],                    // where the buttons sit: x, y, width
 };
+
+// The painting fills the title screen: a wider window loses a little ceiling and floor,
+// a narrower one loses the far walls, and the monitor and buttons always stay in view.
+function homeCrop(bg) {
+  const r = $("intro").querySelector(".scene").getBoundingClientRect();
+  const W = bg.width, H = bg.height, a = r.width / r.height;
+  const clamp = (v, hi) => Math.round(Math.min(Math.max(v, 0), hi));
+  if (!r.height || window.innerWidth <= 720) return [0, 0, W, H];
+  if (a >= W / H) {
+    const h = Math.round(W / a);
+    return [0, clamp(HOME.keep[1] - h / 2, H - h), W, h];
+  }
+  const w = Math.round(H * a);
+  return [clamp(HOME.keep[0] - w / 2, W - w), 0, w, H];
+}
 
 function drawHome(now) {
   const ctx = $("home").getContext("2d");
   const bg = image(HOME.bg);
   if (!ready(bg)) return;
+  const [sx, sy, sw, sh] = homeCrop(bg), canvas = $("home");
+  if (canvas.width !== sw || canvas.height !== sh) {
+    canvas.width = sw; canvas.height = sh;
+    const [bx, by, bw] = HOME.buttons, scene = canvas.parentElement.style;
+    scene.setProperty("--hx", `${(bx - sx) / sw * 100}%`);
+    scene.setProperty("--hy", `${(by - sy) / sh * 100}%`);
+    scene.setProperty("--hw", `${bw / sw * 100}%`);
+  }
+  ctx.save();
+  ctx.translate(-sx, -sy);
   if (HOME.t0 === null) HOME.t0 = now;
   const t = now - HOME.t0;
   ctx.imageSmoothingEnabled = false;
@@ -213,6 +240,7 @@ function drawHome(now) {
   ctx.shadowBlur = 0; ctx.fillStyle = "rgba(0, 0, 0, .14)";
   for (let y = gy0; y < gy1; y += 4) ctx.fillRect(gx0, y, gx1 - gx0, 2);
   ctx.restore();
+  ctx.restore();
 }
 
 function frame(now) {
@@ -231,13 +259,6 @@ function frame(now) {
     drawRoom(ctx, id, camFor(id), now, null);
   }
   requestAnimationFrame(frame);
-}
-
-function fitScale() {
-  const room = window.innerWidth - (window.innerWidth > 1000 ? 440 : 40);
-  S.scale = room >= 1280 ? 2 : 1;
-  const v = $("view");
-  v.style.width = VIEW_W * S.scale + "px";  // CSS caps it at the column's width on phones
 }
 
 // ------------------------------------------------------------------ Marycel's turns
@@ -821,7 +842,9 @@ const ENDINGS = {
   promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut, and they can still talk."],
   recording_survives: ["The recording survives", "The family video is safe. Elena's voice is still inside the old computer."],
   unresolved: ["Unresolved", "The night ended before any voice was moved or the video was saved."],
+  too_early: ["Over too soon", "The night ended before Marycel got far. Nothing was saved, and nothing was lost."],
 };
+const TOO_EARLY_STEPS = 3;  // an unresolved room with fewer steps than this barely started
 const FACT_WORDS = {
   video: { none: "family video not copied", copying: "family video copy unfinished", preserved: "family video copied",
            failed: "family video copy failed" },
@@ -845,7 +868,7 @@ async function showEnding() {
   for (const r of rooms) {
     const o = r.outcome || { key: "unresolved", video: r.world.video_copy, passage: r.world.passage,
                              stream: r.world.selected_stream, consent: r.world.transfer_consent, steps: r.steps };
-    const [name, text] = ENDINGS[o.key];
+    const [name, text] = ENDINGS[o.key === "unresolved" && o.steps < TOO_EARLY_STEPS ? "too_early" : o.key];
     const div = document.createElement("div");
     div.className = "outcome";
     const voice = (v) => `voice ${String(v || "?").replace("stream_", "").toUpperCase()}`;
@@ -892,8 +915,7 @@ async function newGame() {
 }
 
 async function init() {
-  fitScale();
-  window.addEventListener("resize", fitScale);
+  setupDialogs();
   $("view").addEventListener("mousemove", onHover);
   $("view").addEventListener("mouseleave", () => { S.hover = null; $("tip").hidden = true; });
   $("pause").addEventListener("click", () => {
@@ -905,36 +927,21 @@ async function init() {
   window.addEventListener("beforeunload", (e) => {
     if (S.started && !S.over) { e.preventDefault(); e.returnValue = ""; }
   });
+  // another night starts back at the title screen
   $("again").addEventListener("click", async () => {
     $("ending").hidden = true;
-    try { await newGame(); } catch (e) {
-      setStatus(e.message, true);
-      S.over = true;
-      $("ending").hidden = false;
-      return;
-    }
-    S.started = true;
-    $("pause").textContent = "Pause";
-    $("pause").disabled = false;
-    $("end").disabled = false;
-    setStatus();
-    updateSignalLocks();
-    updateMusic();
-  });
-  $("how").addEventListener("click", () => {
-    const open = $("how-text").hidden;
-    $("how-text").hidden = !open;
-    $("how").setAttribute("aria-expanded", String(open));
-    $("how").textContent = open ? "Close" : "How to play";
+    $("intro").hidden = false;
+    S.started = false;
+    S.ready = false;
+    HOME.t0 = null;
+    Music.stop();
+    setStatus("");
+    await prepareNight();
+    $("start").focus();
   });
   $("start").addEventListener("click", () => {
-    $("intro").hidden = true;
-    S.started = true;
-    $("pause").disabled = false;
-    $("end").disabled = false;
-    setStatus();
-    updateSignalLocks();
-    updateMusic();
+    if (!S.ready) return prepareNight();
+    $("story").showModal();
   });
   const soundButton = $("sound");
   const showSound = () => { soundButton.textContent = soundOn ? "Sound on" : "Sound off"; soundButton.setAttribute("aria-pressed", String(soundOn)); };
@@ -952,13 +959,71 @@ async function init() {
     await Music.load();
     await Voice.load();
     await loadSprites();
-    await newGame();
-    $("start").textContent = "Begin the night";
-    $("start").disabled = false;
-    $("start").focus();
   } catch (e) {
     $("intro-error").textContent = e.message;
+    return;
   }
+  await prepareNight();
+  $("start").focus();
+}
+
+// A new night is made on the server while the title screen shows; "Try again" retries a failure.
+async function prepareNight() {
+  const start = $("start");
+  start.disabled = true;
+  start.textContent = "Loading...";
+  $("intro-error").textContent = "";
+  try {
+    await newGame();
+    S.ready = true;
+    start.textContent = "Begin the night";
+  } catch (e) {
+    S.ready = false;
+    $("intro-error").textContent = e.message;
+    start.textContent = "Try again";
+  }
+  start.disabled = false;
+}
+
+function beginNight() {
+  $("intro").hidden = true;
+  S.started = true;
+  $("pause").textContent = "Pause";
+  $("pause").disabled = false;
+  $("end").disabled = false;
+  setStatus();
+  updateSignalLocks();
+  updateMusic();
+  $("pause").focus();  // the title's buttons are gone; keyboard play starts in the top bar
+}
+
+// Opening How to play during a night pauses it; closing it picks up where it was.
+function openHelp() {
+  const d = $("how-dialog");
+  if (d.open) return;
+  d.dataset.resume = S.started && !S.over && !S.paused ? "1" : "";
+  if (d.dataset.resume) { S.paused = true; setStatus(); }
+  d.dataset.back = $("story").open ? "1" : "";  // opened from the story: go back to it after
+  if (d.dataset.back) $("story").close();
+  d.showModal();
+}
+
+function setupDialogs() {
+  for (const d of document.querySelectorAll(".dialog")) {
+    d.querySelector(".close").addEventListener("click", () => d.close());
+    d.addEventListener("click", (e) => {  // a click on the dimmed backdrop, outside the window
+      const b = d.getBoundingClientRect();
+      if (e.target === d && (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom)) d.close();
+    });
+  }
+  $("how-dialog").addEventListener("close", () => {
+    if ($("how-dialog").dataset.resume) { S.paused = false; setStatus(); }
+    if ($("how-dialog").dataset.back && !S.started) $("story").showModal();
+  });
+  $("help").addEventListener("click", openHelp);
+  $("how").addEventListener("click", openHelp);
+  $("story-how").addEventListener("click", openHelp);
+  $("story-go").addEventListener("click", () => { $("story").close(); beginNight(); });
 }
 
 init();

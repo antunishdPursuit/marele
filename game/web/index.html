@@ -14,6 +14,7 @@
   <h1>Marele</h1>
   <span id="status" class="status" role="status">Loading...</span>
   <div class="bar-buttons">
+    <button id="help" type="button" aria-haspopup="dialog">How to play</button>
     <button id="sound" type="button" aria-pressed="true">Sound on</button>
     <button id="pause" type="button" disabled>Pause</button>
     <button id="end" type="button" disabled>End the night</button>
@@ -52,24 +53,41 @@
             aria-label="Marycel at the family computer beside the ofrenda. The screen reads Marele: a ghost who can only speak through the family computer."></canvas>
     <div class="home-actions">
       <button id="start" type="button" disabled>Loading...</button>
-      <button id="how" type="button" aria-expanded="false" aria-controls="how-text">How to play</button>
+      <button id="how" type="button" aria-haspopup="dialog">How to play</button>
       <p id="intro-error" class="error"></p>
-      <a class="source" href="https://github.com/antunishdPursuit/marele" target="_blank" rel="noopener">Open source (MIT) on GitHub</a>
-    </div>
-    <div id="how-text" class="card how" hidden>
-      <h2>Día de Muertos, after midnight</h2>
-      <p>You are <b>Tía Elena</b>. Years ago, repairing the family computer went wrong, and your voice was left inside it.</p>
-      <p>Tonight your niece <b>Marycel</b> sits down at that same old computer to save the family video for the <i>ofrenda</i> (the family altar for the dead). It happens in three rooms at once: three versions of the same night. She decides for herself what to do. You can only reach her through the computer: a few letters on the screen, a tone, a printed note, a piece of the old recording.</p>
-      <ul>
-        <li>Watch. Click a small room picture to see that room.</li>
-        <li>She will find two voices on the old drive. Help her tell which one is yours.</li>
-        <li>Before she moves a voice to the new drive, she asks you. Answer with the buttons that appear: <b>Yes</b>, <b>No</b>, <b>Danger</b> or <b>More tests</b>.</li>
-        <li>Something else is in there with you, the Echo. It can only repeat what Marycel has already played out loud.</li>
-      </ul>
-      <p class="dim">About: made for the Hacktoberfest 2026 "Ghost in the Machine" challenge. Marycel is a small open model (Qwen3-8B) fine-tuned for this game; the game's rules check every step she takes. A cookie keeps your night going and your browser remembers the sound setting; nothing else about you is stored.</p>
     </div>
   </div>
 </div>
+
+<dialog id="story" class="dialog" aria-labelledby="story-title">
+  <button class="close" type="button" aria-label="Close">X</button>
+  <h2 id="story-title">Día de Muertos, after midnight</h2>
+  <p>You are <b>Tía Elena</b>. Years ago, a repair on the family computer went wrong, and your voice was left inside it.</p>
+  <p>Tonight your niece <b>Marycel</b> sits down at that same old computer to save the family video for the <i>ofrenda</i>, the altar for the family's dead. She decides for herself what to do. You can only reach her through the computer.</p>
+  <p>The night plays out in three rooms at once: three versions of the same night.</p>
+  <div class="dialog-actions">
+    <button id="story-go" type="button" class="go">Begin</button>
+    <button id="story-how" type="button" aria-haspopup="dialog">How to play</button>
+  </div>
+</dialog>
+
+<dialog id="how-dialog" class="dialog" aria-labelledby="how-title">
+  <button class="close" type="button" aria-label="Close">X</button>
+  <h2 id="how-title">How to play</h2>
+  <ol class="steps">
+    <li><span class="icon" aria-hidden="true"></span><b>Watch</b>
+      <p>Marycel works in three rooms at once. Click a small room picture to watch that room.</p></li>
+    <li><span class="icon" aria-hidden="true"></span><b>Send a signal</b>
+      <p>You are Elena. Pick a signal from Elena's signals. Every room gets it, but each Marycel notices it only if she can see or hear it.</p></li>
+    <li><span class="icon" aria-hidden="true"></span><b>Answer her</b>
+      <p>She finds two voices on the old drive. Before moving one, she asks you: answer <b>Yes</b>, <b>No</b>, <b>Danger</b> or <b>More tests</b> within about 45 seconds.</p></li>
+    <li><span class="icon" aria-hidden="true"></span><b>Mind the Echo</b>
+      <p>Something else is in there with you. It can only repeat sounds Marycel has already played out loud.</p></li>
+  </ol>
+  <p><b>Pause</b> stops the night. <b>End the night</b> shows how each room turned out.</p>
+  <p class="dim">Made for the Hacktoberfest 2026 "Ghost in the Machine" challenge. Marycel is a small open model (Qwen3-8B) fine-tuned for this game, and the game's rules check every step she takes. A cookie keeps your night going and your browser remembers the sound setting; nothing else is stored.
+    <a href="https://github.com/antunishdPursuit/marele" target="_blank" rel="noopener">Source code on GitHub (MIT)</a></p>
+</dialog>
 
 <div id="ending" class="screen morning" hidden>
   <div class="morning-inner">
