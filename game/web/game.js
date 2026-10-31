@@ -152,7 +152,15 @@ function drawRoom(ctx, id, camX, now, hover) {
   drawMarycel(ctx, rt, now);
 }
 
-const camFor = (id) => Math.min(Math.max(Math.round(S.rt[id].x) - VIEW_W / 2, 0), ROOM_W - VIEW_W);
+// The camera keeps the computer, where Elena is, in the middle, and pans only as far as it
+// must to keep Marycel in the picture.
+const CAM_MARGIN = 72;
+function camFor(id) {
+  const x = Math.round(S.rt[id].x), pc = S.rooms[id].objects.find((o) => o.id === "computer");
+  const want = pc ? (pc.bounds[0] + pc.bounds[2]) / 2 - VIEW_W / 2 : x - VIEW_W / 2;
+  const cam = Math.min(Math.max(want, x - VIEW_W + CAM_MARGIN), x - CAM_MARGIN);
+  return Math.round(Math.min(Math.max(cam, 0), ROOM_W - VIEW_W));
+}
 
 // Walking is timed, not stepped per frame, so a hidden tab (no animation
 // frames) doesn't stall the rooms.
@@ -570,7 +578,7 @@ function updateSignalLocks() {
   for (const row of document.querySelectorAll(".sig")) {
     const s = S.signals.find((x) => x.id === row.dataset.signal);
     const open = S.order.some((id) => S.rooms[id].unlocked[s.unlock] && !S.rooms[id].ended);
-    row.querySelectorAll("input, select, button").forEach((el) => { el.disabled = !open || !S.started || S.over; });
+    row.querySelectorAll("input, select, button").forEach((el) => { el.disabled = !open || !S.started || S.over || S.paused; });
     row.querySelector(".lock").hidden = open || !LOCK_HINTS[s.unlock];
   }
 }
@@ -584,7 +592,7 @@ const STATUS_WORDS = {
 };
 
 async function sendSignal(s, input) {
-  if (S.sending) return;
+  if (S.sending || S.paused) return;
   const params = {};
   if (input) {
     const v = input.value.trim();
@@ -685,7 +693,7 @@ function renderAsk(room, rt) {
   const asking = room.question && !room.ended;
   banner.hidden = !asking && !answered;
   if (banner.hidden) { banner.dataset.key = ""; return; }
-  const key = `${asking ? room.question : ""}|${answered}`;
+  const key = `${asking ? room.question : ""}|${answered}|${S.paused}`;
   if (banner.dataset.key === key) return;
   banner.dataset.key = key;
   banner.innerHTML = `<span class="q"></span><span class="answers"></span>`;
@@ -702,7 +710,7 @@ function renderAsk(room, rt) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = CHOICE_WORDS[c] || c;
-    b.disabled = S.sending;
+    b.disabled = S.sending || S.paused;
     b.addEventListener("click", async () => {
       await sendSignal(s, { name: "choice", value: c });
       if (!banner.hidden) banner.focus();
@@ -918,12 +926,16 @@ async function init() {
   setupDialogs();
   $("view").addEventListener("mousemove", onHover);
   $("view").addEventListener("mouseleave", () => { S.hover = null; $("tip").hidden = true; });
-  $("pause").addEventListener("click", () => {
-    S.paused = !S.paused;
-    $("pause").textContent = S.paused ? "Resume" : "Pause";
-    setStatus();
+  $("pause").addEventListener("click", () => setPaused(!S.paused));
+  // menu items close the menu once chosen
+  $("help").addEventListener("click", () => $("menu").hidePopover());
+  $("menu").addEventListener("toggle", (e) => {  // open just under the gear, inside the window
+    if (e.newState !== "open") return;
+    const m = $("menu"), g = $("menu-button").getBoundingClientRect();
+    m.style.top = `${g.bottom + 6}px`;
+    m.style.left = `${Math.max(8, Math.min(g.right - m.offsetWidth, innerWidth - m.offsetWidth - 8))}px`;
   });
-  $("end").addEventListener("click", showEnding);
+  $("end").addEventListener("click", () => { $("menu").hidePopover(); showEnding(); });
   window.addEventListener("beforeunload", (e) => {
     if (S.started && !S.over) { e.preventDefault(); e.returnValue = ""; }
   });
@@ -988,7 +1000,7 @@ async function prepareNight() {
 function beginNight() {
   $("intro").hidden = true;
   S.started = true;
-  $("pause").textContent = "Pause";
+  showPause();
   $("pause").disabled = false;
   $("end").disabled = false;
   setStatus();
@@ -997,12 +1009,33 @@ function beginNight() {
   $("pause").focus();  // the title's buttons are gone; keyboard play starts in the top bar
 }
 
+// A pause also stops the clock on Marycel's question, so a paused player loses no answer time.
+function setPaused(on) {
+  if (on === S.paused) return;
+  const now = performance.now();
+  if (on) S.pausedAt = now;
+  else for (const id of S.order) if (S.rt[id].askedAt) S.rt[id].askedAt += now - S.pausedAt;
+  S.paused = on;
+  showPause();
+  setStatus();
+}
+
+function showPause() {
+  const b = $("pause"), label = S.paused ? "Resume" : "Pause";
+  b.classList.toggle("paused", S.paused);
+  b.setAttribute("aria-label", label);
+  b.title = label;
+  $("signals").classList.toggle("resting", S.paused);
+  updateSignalLocks();
+  renderPanel();
+}
+
 // Opening How to play during a night pauses it; closing it picks up where it was.
 function openHelp() {
   const d = $("how-dialog");
   if (d.open) return;
   d.dataset.resume = S.started && !S.over && !S.paused ? "1" : "";
-  if (d.dataset.resume) { S.paused = true; setStatus(); }
+  if (d.dataset.resume) setPaused(true);
   d.dataset.back = $("story").open ? "1" : "";  // opened from the story: go back to it after
   if (d.dataset.back) $("story").close();
   d.showModal();
@@ -1017,7 +1050,7 @@ function setupDialogs() {
     });
   }
   $("how-dialog").addEventListener("close", () => {
-    if ($("how-dialog").dataset.resume) { S.paused = false; setStatus(); }
+    if ($("how-dialog").dataset.resume) setPaused(false);
     if ($("how-dialog").dataset.back && !S.started) $("story").showModal();
   });
   $("help").addEventListener("click", openHelp);

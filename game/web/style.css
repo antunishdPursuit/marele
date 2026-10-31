@@ -36,8 +36,18 @@ input, select { background: #0b0e0c; border: 2px solid var(--line); padding: 1px
 
 .bar { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-bottom: 2px solid var(--line); background: var(--panel); flex-wrap: wrap; }
 .status { color: var(--dim); flex: 1; min-width: 200px; }
-.bar-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.bar-buttons button { white-space: nowrap; }
+.bar-buttons { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 720px) { .status { order: 3; flex-basis: 100%; min-width: 0; } }
+.icon-btn { width: 40px; height: 36px; padding: 0; display: grid; place-items: center; }
+.icon-btn svg { width: 20px; height: 20px; fill: currentColor; shape-rendering: crispEdges; }
+#pause .when-paused, #pause.paused .when-running { display: none; }
+#pause.paused .when-paused { display: block; }
+#pause.paused { color: var(--phosphor); border-color: var(--phosphor); }
+/* the settings menu drops down under the gear */
+.menu { position: fixed; inset: auto; margin: 0; padding: 6px; background: var(--panel); color: var(--ink);
+        border: 2px solid var(--warn); box-shadow: 0 0 0 4px #000, 0 8px 24px rgba(0, 0, 0, .6); }
+.menu:popover-open { display: flex; flex-direction: column; gap: 6px; }
+.menu button { text-align: left; white-space: nowrap; padding: 4px 12px; }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; padding: 12px 16px; align-items: start; }
 @media (max-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr); } }
@@ -76,6 +86,7 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 
 .panel { background: var(--panel); border: 2px solid var(--line); padding: 4px 12px 12px; max-height: calc(100vh - 80px); overflow: auto; }
 .hint { color: var(--dim); margin: 0 0 8px; }
+#signals.resting { opacity: .5; }
 .group { border-top: 2px solid var(--line); padding: 6px 0; }
 .group h3 { font-weight: 600; font-size: 14px; color: var(--dim); margin: 0 0 4px; text-transform: uppercase; letter-spacing: 1px; }
 .sig { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }

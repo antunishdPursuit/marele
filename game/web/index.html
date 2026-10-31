@@ -14,12 +14,21 @@
   <h1>Marele</h1>
   <span id="status" class="status" role="status">Loading...</span>
   <div class="bar-buttons">
-    <button id="help" type="button" aria-haspopup="dialog">How to play</button>
-    <button id="sound" type="button" aria-pressed="true">Sound on</button>
-    <button id="pause" type="button" disabled>Pause</button>
-    <button id="end" type="button" disabled>End the night</button>
+    <button id="pause" type="button" class="icon-btn" aria-label="Pause" title="Pause" disabled>
+      <svg class="when-running" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg>
+      <svg class="when-paused" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3h2v1h2v1h2v1h2v4h-2v1h-2v1H7v1H5z"/></svg>
+    </button>
+    <button id="menu-button" type="button" class="icon-btn" popovertarget="menu" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M7 0h2v3H7zM7 13h2v3H7zM0 7h3v2H0zM13 7h3v2h-3zM2 2h2v2H2zM12 2h2v2h-2zM2 12h2v2H2zM12 12h2v2h-2zM4 3h8v1h1v8h-1v1H4v-1H3V4h1zM6 6v4h4V6z"/></svg>
+    </button>
   </div>
 </header>
+
+<div id="menu" class="menu" popover>
+  <button id="help" type="button" aria-haspopup="dialog">How to play</button>
+  <button id="sound" type="button" aria-pressed="true">Sound on</button>
+  <button id="end" type="button" disabled>End the night</button>
+</div>
 
 <main class="layout">
   <section class="stage" aria-label="Rooms">
