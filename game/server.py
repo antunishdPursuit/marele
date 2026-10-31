@@ -203,6 +203,8 @@ class Room:
             try:
                 noticed = w.signal(sid, **params)
             except Refused as e:
+                if sid == "transfer_response" and w.world["transfer_consent"] != "asked":
+                    return {"status": "unavailable", "why": "she isn't waiting for an answer right now"}
                 why = (md.explain(e, w, None) if e.failed else
                        "that channel isn't open yet" if "locked" in str(e) else str(e).replace(f"signal {sid} ", ""))
                 for a, b in (("you haven't", "she hasn't"), ("you aren't", "she isn't"), ("you're", "she's"),
