@@ -236,6 +236,33 @@ class Room:
                 "stream": world["selected_stream"], "elena_stream": self.w.room["hidden"]["elena_stream"],
                 "consent": world["transfer_consent"], "steps": self.steps}
 
+    def signals_now(self) -> dict:
+        """Which of Elena's signals would go through in this room right now. The same unlock and
+        requires checks World.signal makes, so the panel never offers one that will be refused."""
+        w, now = self.w, {}
+        for sid, s in w.signals.items():
+            dev = w.device(s["device"])
+            try:
+                now[sid] = bool(w.unlocked(s["unlock"]) and
+                                all(w.cond(t, dev["id"] if dev else None, {}) for t in s["requires"]))
+            except (KeyError, TypeError, ValueError):
+                now[sid] = False
+        return now
+
+    def reach(self, now: dict) -> dict:
+        """Whether she would notice something on the screen or from the speakers at this moment
+        (given signals_now, so a screen that is off is never one she sees)."""
+        w = self.w
+
+        def notices(sid):
+            dev = w.device(w.signals[sid]["device"])
+            try:
+                return bool(dev) and observe.perceives_now(w, w.signals[sid]["perceived_if"], dev["id"])
+            except (KeyError, TypeError, ValueError):
+                return False
+        return {"screen": now["screen_message"] and notices("screen_message"),
+                "sound": bool(observe.audible_route(w)) and notices("tone")}
+
     def snapshot(self) -> dict:
         w = self.w
         objs = list(w.objects.values())
@@ -268,6 +295,7 @@ class Room:
             "world": w.world, "screen": w.screen["text"] if w.screen else None,
             "question": self.question if w.world["transfer_consent"] == "asked" else None,
             "unlocked": {k: w.unlocked(k) for k in CATALOG["unlocks"]},
+            "signals_now": (now := self.signals_now()), "reach": self.reach(now),
             "sound_route": observe.audible_route(w), "steps": self.steps, "ended": self.ended,
             "outcome": self.outcome() if self.ended else None,
             "log": self.log[-40:],
