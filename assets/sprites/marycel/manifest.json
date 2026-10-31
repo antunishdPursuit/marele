@@ -126,8 +126,8 @@
               "frame_count": 5,
               "durations_ms": [
                 100,
-                90,
-                200,
+                130,
+                180,
                 90,
                 160
               ],
@@ -140,11 +140,33 @@
               "frame_count": 4,
               "durations_ms": [
                 100,
-                220,
-                120,
+                200,
+                130,
                 120
               ],
               "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "look_out": {
+              "sheet": "look_out.png",
+              "frame_count": 2,
+              "durations_ms": [
+                900,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "hold": {
+              "sheet": "hold.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
               "events": {},
               "faces": "right"
             },
@@ -169,7 +191,9 @@
                 300
               ],
               "loop": false,
-              "events": {},
+              "events": {
+                "grab": 2
+              },
               "faces": "right"
             },
             "reach_desk": {
@@ -219,7 +243,9 @@
                 200
               ],
               "loop": false,
-              "events": {},
+              "events": {
+                "grab": 1
+              },
               "faces": "right"
             },
             "kneel": {
@@ -253,6 +279,26 @@
           "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
           "animations": {
             "idle": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  14
+                ]
+              ],
               "sheet": "idle.png",
               "frame_count": 2,
               "durations_ms": [
@@ -264,6 +310,42 @@
               "faces": "right"
             },
             "walk": {
+              "hand": [
+                [
+                  59,
+                  62
+                ],
+                [
+                  59,
+                  61
+                ],
+                [
+                  55,
+                  62
+                ],
+                [
+                  57,
+                  61
+                ]
+              ],
+              "head": [
+                [
+                  38,
+                  14
+                ],
+                [
+                  38,
+                  13
+                ],
+                [
+                  36,
+                  15
+                ],
+                [
+                  38,
+                  13
+                ]
+              ],
               "sheet": "walk.png",
               "frame_count": 4,
               "durations_ms": [
@@ -277,6 +359,82 @@
               "faces": "right"
             },
             "pickup": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  72,
+                  97
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  50,
+                  51
+                ],
+                [
+                  49,
+                  47
+                ],
+                [
+                  49,
+                  47
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "pickup.png",
               "frame_count": 9,
               "durations_ms": [
@@ -298,6 +456,79 @@
               "faces": "right"
             },
             "pickup_and_read": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  72,
+                  97
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  50,
+                  64
+                ],
+                null
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  50,
+                  51
+                ],
+                [
+                  49,
+                  47
+                ],
+                [
+                  49,
+                  47
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  34,
+                  13
+                ]
+              ],
               "sheet": "pickup_and_read.png",
               "frame_count": 9,
               "durations_ms": [
@@ -319,6 +550,20 @@
               "faces": "right"
             },
             "read": {
+              "hand": [
+                null,
+                null
+              ],
+              "head": [
+                [
+                  34,
+                  13
+                ],
+                [
+                  34,
+                  14
+                ]
+              ],
               "sheet": "read.png",
               "frame_count": 2,
               "durations_ms": [
@@ -330,6 +575,26 @@
               "faces": "right"
             },
             "sit_type": {
+              "hand": [
+                [
+                  34,
+                  72
+                ],
+                [
+                  34,
+                  71
+                ]
+              ],
+              "head": [
+                [
+                  21,
+                  28
+                ],
+                [
+                  21,
+                  27
+                ]
+              ],
               "sheet": "sit_type.png",
               "frame_count": 2,
               "durations_ms": [
@@ -341,6 +606,42 @@
               "faces": "right"
             },
             "pull_chair": {
+              "hand": [
+                [
+                  50,
+                  64
+                ],
+                [
+                  61,
+                  50
+                ],
+                [
+                  61,
+                  49
+                ],
+                [
+                  61,
+                  50
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  19
+                ],
+                [
+                  32,
+                  16
+                ],
+                [
+                  32,
+                  15
+                ],
+                [
+                  32,
+                  16
+                ]
+              ],
               "sheet": "pull_chair.png",
               "frame_count": 4,
               "durations_ms": [
@@ -357,12 +658,56 @@
               "faces": "right"
             },
             "sit_down": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  60,
+                  63
+                ],
+                [
+                  64,
+                  57
+                ],
+                [
+                  34,
+                  69
+                ],
+                [
+                  34,
+                  68
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  42,
+                  23
+                ],
+                [
+                  38,
+                  22
+                ],
+                [
+                  22,
+                  30
+                ],
+                [
+                  22,
+                  29
+                ]
+              ],
               "sheet": "sit_down.png",
               "frame_count": 5,
               "durations_ms": [
                 100,
-                90,
-                200,
+                130,
+                180,
                 90,
                 160
               ],
@@ -371,19 +716,137 @@
               "faces": "right"
             },
             "stand_up": {
+              "hand": [
+                [
+                  34,
+                  68
+                ],
+                [
+                  51,
+                  65
+                ],
+                [
+                  60,
+                  63
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  22,
+                  29
+                ],
+                [
+                  51,
+                  27
+                ],
+                [
+                  42,
+                  23
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "stand_up.png",
               "frame_count": 4,
               "durations_ms": [
                 100,
-                220,
-                120,
+                200,
+                130,
                 120
               ],
               "loop": false,
               "events": {},
               "faces": "right"
             },
+            "look_out": {
+              "hand": [
+                [
+                  25,
+                  63
+                ],
+                [
+                  25,
+                  63
+                ]
+              ],
+              "head": [
+                [
+                  38,
+                  13
+                ],
+                [
+                  38,
+                  14
+                ]
+              ],
+              "sheet": "look_out.png",
+              "frame_count": 2,
+              "durations_ms": [
+                900,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "hold": {
+              "hand": [
+                [
+                  50,
+                  36
+                ],
+                [
+                  50,
+                  36
+                ]
+              ],
+              "head": [
+                [
+                  40,
+                  14
+                ],
+                [
+                  40,
+                  16
+                ]
+              ],
+              "sheet": "hold.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
             "sit_idle": {
+              "hand": [
+                [
+                  34,
+                  68
+                ],
+                [
+                  34,
+                  68
+                ]
+              ],
+              "head": [
+                [
+                  22,
+                  29
+                ],
+                [
+                  21,
+                  30
+                ]
+              ],
               "sheet": "sit_idle.png",
               "frame_count": 2,
               "durations_ms": [
@@ -395,6 +858,42 @@
               "faces": "right"
             },
             "sit_reach": {
+              "hand": [
+                [
+                  34,
+                  68
+                ],
+                [
+                  54,
+                  53
+                ],
+                [
+                  54,
+                  53
+                ],
+                [
+                  34,
+                  68
+                ]
+              ],
+              "head": [
+                [
+                  22,
+                  29
+                ],
+                [
+                  28,
+                  35
+                ],
+                [
+                  28,
+                  35
+                ],
+                [
+                  22,
+                  29
+                ]
+              ],
               "sheet": "sit_reach.png",
               "frame_count": 4,
               "durations_ms": [
@@ -404,10 +903,56 @@
                 300
               ],
               "loop": false,
-              "events": {},
+              "events": {
+                "grab": 2
+              },
               "faces": "right"
             },
             "reach_desk": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  56,
+                  51
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  38,
+                  14
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "reach_desk.png",
               "frame_count": 5,
               "durations_ms": [
@@ -424,6 +969,26 @@
               "faces": "right"
             },
             "inspect": {
+              "hand": [
+                [
+                  68,
+                  60
+                ],
+                [
+                  68,
+                  60
+                ]
+              ],
+              "head": [
+                [
+                  57,
+                  20
+                ],
+                [
+                  58,
+                  21
+                ]
+              ],
               "sheet": "inspect.png",
               "frame_count": 2,
               "durations_ms": [
@@ -435,6 +1000,20 @@
               "faces": "right"
             },
             "write": {
+              "hand": [
+                null,
+                null
+              ],
+              "head": [
+                [
+                  36,
+                  12
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "write.png",
               "frame_count": 2,
               "durations_ms": [
@@ -446,6 +1025,31 @@
               "faces": "right"
             },
             "headphones": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                null,
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "headphones.png",
               "frame_count": 3,
               "durations_ms": [
@@ -454,10 +1058,80 @@
                 200
               ],
               "loop": false,
-              "events": {},
+              "events": {
+                "grab": 1
+              },
               "faces": "right"
             },
             "kneel": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  44,
+                  66
+                ],
+                [
+                  44,
+                  66
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  36,
+                  13
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  39,
+                  46
+                ],
+                [
+                  40,
+                  47
+                ],
+                [
+                  48,
+                  35
+                ],
+                [
+                  36,
+                  19
+                ],
+                [
+                  36,
+                  13
+                ]
+              ],
               "sheet": "kneel.png",
               "frame_count": 8,
               "durations_ms": [
@@ -594,6 +1268,26 @@
           "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
           "animations": {
             "idle": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  43,
+                  12
+                ],
+                [
+                  43,
+                  13
+                ]
+              ],
               "sheet": "idle.png",
               "frame_count": 2,
               "durations_ms": [
@@ -605,6 +1299,42 @@
               "faces": "right"
             },
             "walk": {
+              "hand": [
+                [
+                  59,
+                  62
+                ],
+                [
+                  59,
+                  61
+                ],
+                [
+                  55,
+                  62
+                ],
+                [
+                  57,
+                  61
+                ]
+              ],
+              "head": [
+                [
+                  48,
+                  17
+                ],
+                [
+                  49,
+                  14
+                ],
+                [
+                  43,
+                  16
+                ],
+                [
+                  46,
+                  13
+                ]
+              ],
               "sheet": "walk.png",
               "frame_count": 4,
               "durations_ms": [
@@ -618,6 +1348,82 @@
               "faces": "right"
             },
             "pickup": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  72,
+                  97
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  50,
+                  62
+                ]
+              ],
+              "head": [
+                [
+                  43,
+                  12
+                ],
+                [
+                  42,
+                  18
+                ],
+                [
+                  57,
+                  39
+                ],
+                [
+                  60,
+                  55
+                ],
+                [
+                  60,
+                  53
+                ],
+                [
+                  60,
+                  53
+                ],
+                [
+                  57,
+                  39
+                ],
+                [
+                  42,
+                  18
+                ],
+                [
+                  43,
+                  12
+                ]
+              ],
               "sheet": "pickup.png",
               "frame_count": 9,
               "durations_ms": [
@@ -639,6 +1445,79 @@
               "faces": "right"
             },
             "pickup_and_read": {
+              "hand": [
+                [
+                  50,
+                  62
+                ],
+                [
+                  50,
+                  64
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  72,
+                  97
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  96
+                ],
+                [
+                  72,
+                  93
+                ],
+                [
+                  50,
+                  64
+                ],
+                null
+              ],
+              "head": [
+                [
+                  43,
+                  12
+                ],
+                [
+                  42,
+                  18
+                ],
+                [
+                  57,
+                  39
+                ],
+                [
+                  60,
+                  55
+                ],
+                [
+                  60,
+                  53
+                ],
+                [
+                  60,
+                  53
+                ],
+                [
+                  57,
+                  39
+                ],
+                [
+                  42,
+                  18
+                ],
+                [
+                  42,
+                  12
+                ]
+              ],
               "sheet": "pickup_and_read.png",
               "frame_count": 9,
               "durations_ms": [
@@ -660,6 +1539,20 @@
               "faces": "right"
             },
             "read": {
+              "hand": [
+                null,
+                null
+              ],
+              "head": [
+                [
+                  42,
+                  12
+                ],
+                [
+                  42,
+                  13
+                ]
+              ],
               "sheet": "read.png",
               "frame_count": 2,
               "durations_ms": [
@@ -671,6 +1564,26 @@
               "faces": "right"
             },
             "sit_type": {
+              "hand": [
+                [
+                  34,
+                  72
+                ],
+                [
+                  34,
+                  71
+                ]
+              ],
+              "head": [
+                [
+                  20,
+                  34
+                ],
+                [
+                  20,
+                  33
+                ]
+              ],
               "sheet": "sit_type.png",
               "frame_count": 2,
               "durations_ms": [

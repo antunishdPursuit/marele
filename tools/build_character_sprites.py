@@ -48,7 +48,21 @@ EXTRA_SHEETS = {
          ["ref_a", "pull_chair", "sit_lower", "sit_idle", "sit_reach", "reach_desk"]),
         ("Marycel - Star Sweater Poses B.png",
          ["ref_b", "lean_inspect", "write", "headphones", "kneel", "kneel_reach"]),
+        ("Marycel - Star Sweater Poses C.png",
+         ["ref_c", "look_out", "hold_chest", "sit_begin", "rise_push", "walk_hold"]),
     ],
+}
+
+# Where her hand is in each pose that can carry something, in native cell pixels
+# (the frame with no dx/dy offset, facing right). Held items are drawn there.
+HANDS: dict[str, tuple[int, int]] = {
+    "idle": (50, 62), "idle_dip": (50, 64),
+    "walk_a": (59, 62), "walk_a_pass": (59, 62), "walk_b": (55, 62), "walk_b_pass": (57, 62),
+    "crouch_reach": (72, 96), "crouch_drop": (72, 93), "crouch_land": (72, 97),
+    "reach_desk": (56, 51), "hold_chest": (50, 36), "lean_inspect": (68, 60), "kneel": (44, 66),
+    "sit_type": (34, 72), "sit_idle": (36, 68), "sit_reach": (57, 53),  # typing: it rests on her lap
+    "sit_begin": (60, 63), "sit_lower": (64, 57), "rise_push": (51, 65), "pull_chair": (61, 50),
+    "look_out": (25, 63),  # the lower hand; the other is on the sill
 }
 
 # Export scales: label -> target standing height in pixels.
@@ -358,17 +372,20 @@ EXTRA_ANIMATIONS = {
     },
     "sit_down": {  # backing down onto the chair behind her
         "loop": False,
-        "frames": [("idle", 0, 0, 100), ("idle_dip", 0, 0, 90), ("sit_lower", 0, 0, 200),
+        "frames": [("idle", 0, 0, 100), ("sit_begin", 0, 0, 130), ("sit_lower", 0, 0, 180),
                    ("sit_idle", -2, 1, 90), ("sit_idle", -2, 0, 160)],
     },
-    "stand_up": {
+    "stand_up": {  # hands on knees, push up, straighten
         "loop": False,
-        "frames": [("sit_idle", -2, 0, 100), ("sit_lower", 0, 0, 220), ("idle_dip", 0, 0, 120), ("idle", 0, 0, 120)],
+        "frames": [("sit_idle", -2, 0, 100), ("rise_push", 0, 0, 200), ("sit_begin", 0, 0, 130), ("idle", 0, 0, 120)],
     },
+    "look_out": {"loop": True, "frames": [("look_out", 0, 0, 900), ("look_out_breathe", 0, 0, 700)]},
+    "hold": {"loop": True, "frames": [("hold_chest", 0, 0, 700), ("hold_chest_breathe", 0, 0, 600)]},
     # Seated poses shift so her hips stay where sit_type puts them.
     "sit_idle": {"loop": True, "frames": [("sit_idle", -2, 0, 900), ("sit_idle_breathe", -2, 0, 700)]},
     "sit_reach": {
         "loop": False,
+        "events": {"grab": 2},
         "frames": [("sit_idle", -2, 0, 120), ("sit_reach", -3, 0, 200), ("sit_reach", -3, 0, 500),
                    ("sit_idle", -2, 0, 300)],
     },
@@ -382,6 +399,7 @@ EXTRA_ANIMATIONS = {
     "write": {"loop": True, "frames": [("write", 0, 0, 500), ("write_breathe", 0, 0, 400)]},
     "headphones": {
         "loop": False,
+        "events": {"grab": 1},  # they reach her head as her hands do
         "frames": [("idle", 0, 0, 120), ("headphones", 0, 0, 600), ("idle", 0, 0, 200)],
     },
     "kneel": {  # down through the crouch, a moment at the ofrenda, and up again
@@ -422,7 +440,7 @@ def build_pose_library(poses: list[Pose], seam: tuple[float, float]) -> dict[str
     mid = (stand_h * 0.35 + crouch_h * 0.65) / crouch_h
     lib["crouch_drop"] = squash(lib["crouch_reach"], mid, 0.97, "crouch_drop")
     lib["crouch_land"] = squash(lib["crouch_reach"], 0.96, 1.03, "crouch_land")
-    for name in ("sit_idle", "write", "lean_inspect", "kneel"):
+    for name in ("sit_idle", "write", "lean_inspect", "kneel", "look_out", "hold_chest"):
         if name in lib:
             lib[name + "_breathe"] = squash(lib[name], 0.99, 1.005, name + "_breathe")
     return lib
@@ -444,6 +462,15 @@ def scale_pose(pose: Pose, factor: float) -> Pose:
     out = np.concatenate([rgb, np.where(sa >= 110, 255, 0)], -1)
     out[out[..., 3] == 0, :3] = 0
     return Pose(pose.name, Image.fromarray(out.clip(0, 255).astype(np.uint8)), round(pose.anchor_x * factor))
+
+
+def head_point(cell: Image.Image) -> list[int]:
+    """Roughly where headphones sit: a little below the top of her head, at its middle."""
+    a = np.array(cell)[..., 3] > 0
+    ys = np.nonzero(a.any(1))[0]
+    row = ys.min() + 9
+    xs = np.nonzero(a[row])[0]
+    return [int(round((xs.min() + xs.max()) / 2)), int(row)]
 
 
 def export_outfit(outfit: str, lib: dict[str, Pose]) -> dict:
@@ -505,7 +532,17 @@ def export_outfit(outfit: str, lib: dict[str, Pose]) -> dict:
                 loop=0,
                 disposal=2,
             )
+            if label == "native":
+                extra = {"hand": [list(HANDS[f[0].replace("_breathe", "")]) if f[0].replace("_breathe", "") in HANDS
+                                  else None for f in spec["frames"]],
+                         "head": [head_point(c) for c in cells]}
+                for i, f in enumerate(spec["frames"]):
+                    if extra["hand"][i]:
+                        extra["hand"][i] = [extra["hand"][i][0] + f[1], extra["hand"][i][1] + f[2]]
+            else:
+                extra = {}
             info["animations"][anim_name] = {
+                **extra,
                 "sheet": f"{anim_name}.png",
                 "frame_count": len(cells),
                 "durations_ms": durations,
