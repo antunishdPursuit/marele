@@ -54,6 +54,7 @@ OLLAMA = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434") + "/api/chat"
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8765"))
 DAILY_STEPS = int(os.environ.get("DAILY_STEP_LIMIT", "6000"))  # hosted budget: about $0.0005 a step on Tinker
+KEY_VALUE_URL = os.environ.get("KEY_VALUE_URL")                # a Key Value store keeps that count across restarts
 MAX_GAMES = int(os.environ.get("MAX_GAMES", "40"))             # nights kept in memory at once
 NEW_GAMES_PER_DAY = int(os.environ.get("NEW_GAMES_PER_DAY", "25"))  # per visitor address
 IDLE_SECONDS = 30 * 60                                          # a night nobody touches is dropped
@@ -73,22 +74,43 @@ class OutOfBudget(Exception):
 
 
 class Budget:
-    """Steps the hosted copy may ask Tinker for today (resets at midnight UTC)."""
+    """Steps the hosted copy may ask Tinker for today (resets at midnight UTC). With KEY_VALUE_URL
+    the count lives in that store, so a restart or a sleeping server doesn't reset it; while the
+    store can't be reached, a count in memory takes over."""
 
-    def __init__(self, limit: int):
+    def __init__(self, limit: int, url: str | None = None):
         self.limit, self.day, self.used, self.lock = limit, "", 0, threading.Lock()
+        self.store, self.store_down = None, False
+        if url:
+            import redis  # only the hosted copy needs it (requirements.txt)
+            self.store = redis.Redis.from_url(url, socket_timeout=2, socket_connect_timeout=2)
 
     def take(self):
+        today = time.strftime("%Y-%m-%d", time.gmtime())
+        if self.store is not None:
+            try:
+                key = f"marele:steps:{today}"
+                used, _ = self.store.pipeline().incr(key).expire(key, 2 * 86400).execute()
+                self.store_down = False
+                return self._check(used)
+            except OutOfBudget:
+                raise
+            except Exception as e:  # unreachable: say so once, then count in memory meanwhile
+                if not self.store_down:
+                    print(f"step budget store unavailable ({type(e).__name__}); counting in memory", file=sys.stderr)
+                self.store_down = True
         with self.lock:
-            today = time.strftime("%Y-%m-%d", time.gmtime())
             if today != self.day:
                 self.day, self.used = today, 0
-            if self.used >= self.limit:
-                raise OutOfBudget("Marycel has worked enough nights for today. Please come back tomorrow.")
             self.used += 1
+            self._check(self.used)
+
+    def _check(self, used: int):
+        if used > self.limit:
+            raise OutOfBudget("Marycel has worked enough nights for today. Please come back tomorrow.")
 
 
-BUDGET = Budget(DAILY_STEPS)
+BUDGET = Budget(DAILY_STEPS, KEY_VALUE_URL)
 
 
 def chat(messages) -> str:

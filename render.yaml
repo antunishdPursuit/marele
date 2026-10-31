@@ -18,5 +18,18 @@ services:
         value: tinker
       - key: DAILY_STEP_LIMIT
         value: "6000"
+      # the day's step count lives in the Key Value store below, so a restart or a
+      # sleeping server doesn't reset it
+      - key: KEY_VALUE_URL
+        fromService:
+          type: keyvalue
+          name: marele-steps
+          property: connectionString
       - key: TINKER_API_KEY
         sync: false
+  - type: keyvalue
+    name: marele-steps
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction  # a counter must never be evicted
+    ipAllowList: []  # reachable only from the game service, inside Render
