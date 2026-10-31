@@ -1,0 +1,182 @@
+{
+ "id": "electronics-workshop",
+ "label": "Electronics restoration workshop",
+ "situation": "Ordered technical space with cool surfaces and task lighting; photo and remembrance near the notes. The speakers are unplugged because the computer's sound goes to the headphones on the workbench. The printer is ready but has no paper.",
+ "marycel_start": {
+  "at": "computer",
+  "facing": "left"
+ },
+ "objects": [
+  {
+   "id": "printer_table",
+   "kind": "printer_table",
+   "x": 120,
+   "base": 184
+  },
+  {
+   "id": "printer",
+   "kind": "printer",
+   "x": 127,
+   "base": 146,
+   "stand_x": 190,
+   "facing": "left",
+   "state": {
+    "power": "on",
+    "cable": "connected",
+    "paper": "empty",
+    "output": "none",
+    "jam": "no"
+   }
+  },
+  {
+   "id": "storage",
+   "kind": "storage",
+   "x": 214,
+   "base": 184,
+   "stand_x": 258,
+   "facing": "left",
+   "state": {
+    "open": "no"
+   }
+  },
+  {
+   "id": "desk",
+   "kind": "desk",
+   "x": 430,
+   "base": 184
+  },
+  {
+   "id": "speakers",
+   "kind": "speakers",
+   "x": 431,
+   "base": 136,
+   "stand_x": 516,
+   "facing": "left",
+   "state": {
+    "connected": "no",
+    "muted": "no",
+    "volume": "medium"
+   }
+  },
+  {
+   "id": "computer",
+   "kind": "computer",
+   "x": 442,
+   "base": 136,
+   "stand_x": 516,
+   "facing": "left",
+   "state": {
+    "power": "on",
+    "display": "idle",
+    "app": "none",
+    "tape_deck": "empty",
+    "tape_playback": "stopped",
+    "file_playback": "stopped",
+    "disk": "none",
+    "device": "none",
+    "print_route": "off"
+   },
+   "sit_x": 451
+  },
+  {
+   "id": "keyboard",
+   "kind": "keyboard",
+   "x": 468,
+   "base": 136
+  },
+  {
+   "id": "chair",
+   "kind": "chair",
+   "x": 442,
+   "base": 184
+  },
+  {
+   "id": "window",
+   "kind": "window",
+   "stand_x": 580,
+   "facing": "right"
+  },
+  {
+   "id": "ofrenda",
+   "kind": "ofrenda",
+   "x": 598,
+   "base": 184,
+   "stand_x": 666,
+   "facing": "left",
+   "state": {
+    "candles": "unlit"
+   }
+  },
+  {
+   "id": "workbench",
+   "kind": "workbench",
+   "x": 700,
+   "base": 184,
+   "stand_x": 800,
+   "facing": "left"
+  },
+  {
+   "id": "door",
+   "kind": "door",
+   "stand_x": 876,
+   "facing": "right"
+  }
+ ],
+ "items": [
+  {
+   "id": "recording",
+   "kind": "recording",
+   "in": "storage"
+  },
+  {
+   "id": "paper",
+   "kind": "paper",
+   "on": [
+    "workbench",
+    "shelf_a"
+   ]
+  },
+  {
+   "id": "notebook",
+   "kind": "notebook",
+   "on": [
+    "workbench",
+    "shelf_b"
+   ]
+  },
+  {
+   "id": "headphones",
+   "kind": "headphones",
+   "on": [
+    "workbench",
+    "bench_top"
+   ],
+   "state": {
+    "worn": "no",
+    "plugged": "yes"
+   }
+  },
+  {
+   "id": "photo",
+   "kind": "photo",
+   "on": [
+    "ofrenda",
+    "riser"
+   ]
+  },
+  {
+   "id": "archive_disk",
+   "kind": "archive_disk",
+   "in": "storage"
+  },
+  {
+   "id": "transfer_device",
+   "kind": "transfer_device",
+   "in": "storage"
+  }
+ ],
+ "hidden": {
+  "elena_stream": "stream_b",
+  "notes": "Author-only truth: which recovery-map stream is Elena's anchor. Never shown to Marycel or the player."
+ }
+}

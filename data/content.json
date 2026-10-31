@@ -1,0 +1,84 @@
+{
+ "about": "What Marycel actually sees, hears and reads. The rules engine (tools/sim.py) turns these texts and the live room state into her observations, so training data only ever contains things she could perceive. Texts follow the Story Bible: proposed authorial truth, open to revision. Nothing here names a stream as Elena or the Echo; only the room's hidden field knows.",
+ "machine": {
+  "files": [
+   {"id": "family_video", "name": "FAMILY_VIDEO", "line": "FAMILY_VIDEO      playable  family recording, digitized from tape"},
+   {"id": "damaged_tail", "name": "FAMILY_VIDEO.TAIL", "line": "FAMILY_VIDEO.TAIL damaged   opens only in the recovery tool"},
+   {"id": "notes", "name": "NOTES.TXT", "line": "NOTES.TXT         text      working notes"},
+   {"id": "recovery_log", "name": "RECOVERY.LOG", "line": "RECOVERY.LOG      text      last session: interrupted"},
+   {"id": "recovery_map", "name": "WORKSPACE.MAP", "line": "WORKSPACE.MAP     map       opens in the recovery tool"}
+  ],
+  "notes": "NOTES.TXT\nDigitizing the family tape.\n1. Copy the original first. Always. Repair the copy, never the tape.\n2. The tail of the tape is damaged: the last shot of the gathering, then an empty room. The picture keeps coming back to it.\n3. The recovery tool can rebuild the tail in a workspace. Trying it tonight.\n4. There is a voice on the tail. Not one of ours? Listen again with headphones.\n5. M. wanted to keep the paper flower with the torn petal. Showed her how to fold it back instead of starting over.",
+  "recovery_log": "RECOVERY.LOG\nsession 1  read-only copy of FAMILY_VIDEO ........ done\nsession 2  rebuild FAMILY_VIDEO.TAIL in workspace .. started\nsession 2  workspace output -> speakers\nsession 2  user PAUSE received\nsession 2  PAUSE held, commit pending\nsession 2  commit ............................ INTERRUPTED\nnote: the playable part (FAMILY_VIDEO) and the workspace tail use separate source paths.\nnote: 'Copy playable video' copies the playable part only.\n(log incomplete after interruption)",
+  "tape": "The tape plays through the old deck. The family gathering: voices over each other, someone calling \"Come see!\", hands setting photographs and candles on a table. Near the end the gathering cuts to an empty room and the picture holds there, silent, before static. The digital file stops before the empty room.",
+  "video": {
+   "start": "FAMILY_VIDEO, start: the family gathering. Voices over each other, someone calling \"Come see!\", photographs and candles going onto a long table. The camera operator is never in frame; you only hear her laugh.",
+   "middle": "FAMILY_VIDEO, middle: a small girl's hands and a paper flower with a torn petal. A woman's voice behind the camera, close and patient: \"Don't start over. Fold it back.\"",
+   "end": "FAMILY_VIDEO, end: the last shot of the gathering, the table full. The file stops there; the damaged tail is not part of it."
+  },
+  "recording_phrases": {"start": ["come see"], "middle": ["don't start over", "fold it back"], "end": []},
+  "damaged_segment": {
+   "text": "FAMILY_VIDEO.TAIL (preview): an empty room, a lot like this one. No one in frame. A voice, quiet and too close to the microphone: \"come see... fold it back... come see.\" The words are from the family clip, in the wrong order and at the wrong time.",
+   "phrases": ["come see", "fold it back"]
+  },
+  "fragments": [
+   {"id": "gathering", "text": "A fragment of the gathering plays: overlapping voices, someone calling \"Come see!\"", "phrases": ["come see"]},
+   {"id": "flower", "text": "A fragment plays: a woman's voice, close and patient: \"Don't start over. Fold it back.\"", "phrases": ["don't start over", "fold it back"]},
+   {"id": "working_late", "text": "A fragment plays: a quiet room, keys clicking, the same woman's voice, tired: \"One more try, then bed.\"", "phrases": ["one more try"]},
+   {"id": "warning", "text": "A fragment plays: the same woman's voice, urgent and low: \"If you find this, don't run the recovery again. Copy it first.\"", "phrases": ["copy it first"]}
+  ],
+  "recovery_status": {
+   "header": "RECOVERY TOOL  workspace: FAMILY_VIDEO.TAIL",
+   "recovery": {
+    "interrupted": "Last commit INTERRUPTED. The workspace is still open.",
+    "active": "Recovery RUNNING: rebuilding the tail.",
+    "paused": "Recovery PAUSED. Commit pending.",
+    "stopped": "Recovery STOPPED. Workspace held, nothing committed.",
+    "completed": "Recovery COMPLETED. Commit written; the log does not say what changed."
+   },
+   "isolation": {"off": "Workspace output: routed to the room's sound.", "on": "Workspace output: ISOLATED."},
+   "footer": "Controls: start, pause, stop recovery; isolate output; copy playable video; open map."
+  },
+  "copy_result": {
+   "none": "The archive disk has no copy on it.",
+   "copying": "Copy in progress.",
+   "preserved": "Archive disk: FAMILY_VIDEO playable part copied and verified. The damaged tail is not included.",
+   "failed": "Copy FAILED: the disk holds an incomplete file. It can be copied again."
+  },
+  "streams": "WORKSPACE.MAP\nTwo active streams in the recovery workspace. No labels.\nstream A  active\nstream B  active\nCompare them to see their history.",
+  "stream_history": {
+   "anchor": "first activity: session 2, at the held PAUSE. Earlier source: none recorded.",
+   "echo": "first activity: session 2, inside FAMILY_VIDEO.TAIL. Earlier source: FAMILY_VIDEO audio.",
+   "incomplete": "History incomplete after the interrupted commit."
+  },
+  "photo_and_recording": "The table, the candles and the camcorder in the photograph match the gathering in the video. The woman holding the camera in the photo is never on screen in the video, only her voice."
+ },
+ "items": {
+  "photo": {"front": "A family photograph: a long table covered in photographs and candles. A young woman at the edge holds a camcorder, half out of frame.", "back": "Pencil on the back: \"Elena behind the camera, as always.\""},
+  "recording": {"front": "A videotape in a worn sleeve.", "back": "A faded pencil label: \"Family, ofrenda night. Copy before fixing. E.\""},
+  "printout": {"elena": "A printed page: \"{text}\"", "file": "A printout of {file}:\n{text}"}
+ },
+ "rooms": {
+  "repair-shop": {
+   "outside": "Night. A dark street, pine trees against the stars, one porch light across the road.",
+   "ofrenda": "Photographs of her parents, a paper flower with one petal folded back, and the family photograph on the riser.",
+   "notebook": "Marycel's notebook: \"Family computer from Mom's closet. Recover the tape video for the ofrenda. Printer put away: cable on the bench shelf, paper in the box with the tape.\"",
+   "cable_condition": "The printer cable is worn at one end but tests fine.",
+   "incomplete_stream": "echo"
+  },
+  "electronics-workshop": {
+   "outside": "Night. A parking lot under a sodium lamp, pines beyond the fence.",
+   "ofrenda": "Her parents' photographs and a small paper flower. Candles not yet lit.",
+   "notebook": "Marycel's notebook: \"Family computer. Sound runs to the headphones on the bench, speakers unplugged. Printer ready, needs paper (shelf).\"",
+   "cable_condition": "Nothing to test here; the printer is already connected.",
+   "incomplete_stream": "anchor"
+  },
+  "home-workshop": {
+   "outside": "Night. A quiet backyard, a wooden fence, pines and stars.",
+   "ofrenda": "Her parents' photographs, half unpacked, and a paper flower leaning against a frame.",
+   "notebook": "Marycel's notebook: \"Moved in. The printer jammed in the move. Speakers still not plugged in. Tape and disk in the moving box.\"",
+   "cable_condition": "Nothing to test here; the printer is already connected.",
+   "incomplete_stream": "none"
+  }
+ }
+}

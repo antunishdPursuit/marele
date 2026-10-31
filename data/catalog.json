@@ -1,0 +1,3608 @@
+{
+ "about": "Shared rules for all three rooms. 'kinds' lists each object's states, the sprite for each state and where items can sit. 'marycel' and 'world' list per-room state that is not an object: Marycel's own condition and the story facts. 'actions' are everything Marycel may do; 'signals' are everything Elena may send. The game checks every 'requires' list before an action or signal runs, then applies its 'effects'. Conditions: {state, is} on the target object; {device, state, is} on another object in the room; {world, is}; {marycel, is}; {holding: kind | null | 'readable' | '*'}; {item_in_target: '*'}; {item_state, is}; {unlocked}; {any: [[...], [...]]}. An 'is' may be a list of allowed values. Effects: {state, set}; {device, state, set}; {world, set}; {marycel, set}; {take: kind|'*'}; {put_held: true}; {consume_held: true}; {create_held: kind}; {item_state, set}. 'observes' names what Marycel learns; 'speech' means the action carries words she chooses. The model proposes an action and the game validates it; nothing here lets the model invent world changes.",
+ "walk_range": [
+  44,
+  880
+ ],
+ "kinds": {
+  "computer": {
+   "label": "Computer",
+   "states": {
+    "power": [
+     "on",
+     "off"
+    ],
+    "display": [
+     "idle",
+     "message",
+     "app"
+    ],
+    "app": [
+     "none",
+     "files",
+     "video",
+     "notes",
+     "log",
+     "diagnostics",
+     "recovery",
+     "map"
+    ],
+    "tape_deck": [
+     "empty",
+     "recording"
+    ],
+    "tape_playback": [
+     "stopped",
+     "playing",
+     "paused"
+    ],
+    "file_playback": [
+     "stopped",
+     "playing",
+     "paused"
+    ],
+    "disk": [
+     "none",
+     "blank",
+     "copied",
+     "verified"
+    ],
+    "device": [
+     "none",
+     "connected"
+    ],
+    "print_route": [
+     "off",
+     "on"
+    ]
+   },
+   "sprites": [
+    {
+     "when": {
+      "power": "off"
+     },
+     "sprite": "crt_off"
+    },
+    {
+     "when": {
+      "display": "message"
+     },
+     "sprite": "crt_message"
+    },
+    {
+     "sprite": "crt_on"
+    }
+   ]
+  },
+  "speakers": {
+   "label": "Speakers",
+   "states": {
+    "connected": [
+     "yes",
+     "no"
+    ],
+    "muted": [
+     "yes",
+     "no"
+    ],
+    "volume": [
+     "low",
+     "medium",
+     "high"
+    ]
+   },
+   "sprites": [
+    {
+     "when": {
+      "connected": "yes",
+      "muted": "no"
+     },
+     "sprite": "speaker_on"
+    },
+    {
+     "sprite": "speaker_off"
+    }
+   ]
+  },
+  "printer": {
+   "label": "Printer",
+   "states": {
+    "power": [
+     "on",
+     "off"
+    ],
+    "cable": [
+     "connected",
+     "disconnected"
+    ],
+    "paper": [
+     "loaded",
+     "empty"
+    ],
+    "output": [
+     "none",
+     "printed"
+    ],
+    "jam": [
+     "no",
+     "yes"
+    ]
+   },
+   "sprites": [
+    {
+     "sprite": "printer_{power}_{paper}"
+    }
+   ],
+   "overlays": [
+    {
+     "when": {
+      "output": "printed"
+     },
+     "sprite": "printout",
+     "dx": 5,
+     "dy": 16
+    },
+    {
+     "when": {
+      "cable": "connected"
+     },
+     "sprite": "printer_cable",
+     "dx": 34,
+     "dy": 12
+    },
+    {
+     "when": {
+      "jam": "yes"
+     },
+     "sprite": "paper_jam",
+     "dx": 9,
+     "dy": 15
+    }
+   ]
+  },
+  "storage": {
+   "label": "Storage box",
+   "states": {
+    "open": [
+     "yes",
+     "no"
+    ]
+   },
+   "sprites": [
+    {
+     "when": {
+      "open": "yes"
+     },
+     "sprite": "storage_open"
+    },
+    {
+     "sprite": "storage_closed"
+    }
+   ],
+   "container": true
+  },
+  "workbench": {
+   "label": "Workbench",
+   "states": {},
+   "sprites": [
+    {
+     "sprite": "workbench"
+    }
+   ],
+   "slots": {
+    "bench_top": [
+     13,
+     24
+    ],
+    "shelf_a": [
+     38,
+     55
+    ],
+    "shelf_b": [
+     56,
+     55
+    ]
+   }
+  },
+  "ofrenda": {
+   "label": "Ofrenda",
+   "states": {
+    "candles": [
+     "lit",
+     "unlit"
+    ]
+   },
+   "sprites": [
+    {
+     "sprite": "ofrenda_{candles}"
+    }
+   ],
+   "slots": {
+    "riser": [
+     20,
+     27
+    ]
+   }
+  },
+  "door": {
+   "label": "Door",
+   "states": {},
+   "sprites": []
+  },
+  "window": {
+   "label": "Window",
+   "states": {},
+   "sprites": []
+  },
+  "desk": {
+   "label": "Desk",
+   "states": {},
+   "sprites": [
+    {
+     "sprite": "desk"
+    }
+   ],
+   "furniture": true
+  },
+  "chair": {
+   "label": "Chair",
+   "states": {},
+   "sprites": [
+    {
+     "sprite": "chair"
+    }
+   ],
+   "furniture": true,
+   "notes": "Marycel sits here to type; see sit_down and stand_up."
+  },
+  "printer_table": {
+   "label": "Printer table",
+   "states": {},
+   "sprites": [
+    {
+     "sprite": "printer_table"
+    }
+   ],
+   "furniture": true
+  },
+  "keyboard": {
+   "label": "Keyboard",
+   "states": {},
+   "sprites": [
+    {
+     "sprite": "keyboard"
+    }
+   ],
+   "furniture": true
+  }
+ },
+ "items": {
+  "recording": {
+   "label": "Family recording (VHS tape)",
+   "sprite": "tape",
+   "readable": false,
+   "notes": "The physical original. FAMILY_VIDEO on the computer is Elena's earlier digital copy; the recovery tool, damaged segment and archive-disk copy work on the file, and comparing tape and file is a clue."
+  },
+  "photo": {
+   "label": "Family photograph",
+   "sprite": "photo",
+   "readable": true
+  },
+  "notebook": {
+   "label": "Notebook and pen",
+   "sprite": "notebook",
+   "readable": true
+  },
+  "paper": {
+   "label": "Printer paper",
+   "sprite": "paper",
+   "readable": false
+  },
+  "cable": {
+   "label": "Printer cable",
+   "sprite": "cable",
+   "readable": false
+  },
+  "headphones": {
+   "label": "Headphones",
+   "sprite": "headphones",
+   "readable": false,
+   "states": {
+    "worn": [
+     "yes",
+     "no"
+    ],
+    "plugged": [
+     "yes",
+     "no"
+    ]
+   }
+  },
+  "printout": {
+   "label": "Printout",
+   "sprite": "printout",
+   "readable": true
+  },
+  "archive_disk": {
+   "label": "Blank archive disk",
+   "sprite": "disk",
+   "readable": false
+  },
+  "transfer_device": {
+   "label": "Second transfer device",
+   "sprite": "transfer_device",
+   "readable": false
+  }
+ },
+ "actions": [
+  {
+   "id": "walk_to",
+   "label": "Walk to an object or spot",
+   "group": "Moving and general",
+   "kinds": "*",
+   "requires": [],
+   "effects": [],
+   "anim": "walk",
+   "ms": 0,
+   "notes": "Duration follows distance at walk speed.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "turn_around",
+   "label": "Turn to face the other way",
+   "group": "Moving and general",
+   "kinds": [],
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 300,
+   "params": {}
+  },
+  {
+   "id": "wait",
+   "label": "Wait and watch",
+   "group": "Moving and general",
+   "kinds": [],
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 2000,
+   "params": {}
+  },
+  {
+   "id": "inspect",
+   "label": "Inspect closely",
+   "group": "Moving and general",
+   "kinds": "*",
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 1500,
+   "observes": "target_states",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "say_aloud",
+   "label": "Say something aloud",
+   "group": "Moving and general",
+   "kinds": [],
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 1500,
+   "speech": true,
+   "notes": "Whether Elena hears it (a fictional computer microphone) is still open.",
+   "params": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "sit_down",
+   "label": "Sit down at the desk",
+   "group": "Moving and general",
+   "kinds": [
+    "chair"
+   ],
+   "requires": [
+    {
+     "marycel": "seated",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "marycel": "seated",
+     "set": "yes"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 600,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "stand_up",
+   "label": "Stand up",
+   "group": "Moving and general",
+   "kinds": [
+    "chair"
+   ],
+   "requires": [
+    {
+     "marycel": "seated",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "marycel": "seated",
+     "set": "no"
+    }
+   ],
+   "anim": "idle",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "look_out",
+   "label": "Look out of the window",
+   "group": "Door and window",
+   "kinds": [
+    "window"
+   ],
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 1500,
+   "observes": "outside",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "leave_room",
+   "label": "Leave the room",
+   "group": "Door and window",
+   "kinds": [
+    "door"
+   ],
+   "requires": [
+    {
+     "marycel": "location",
+     "is": "at_object"
+    }
+   ],
+   "effects": [
+    {
+     "marycel": "location",
+     "set": "away"
+    }
+   ],
+   "anim": "walk",
+   "ms": 0,
+   "notes": "Signals sent while she is away go unnoticed.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "return",
+   "label": "Come back in",
+   "group": "Door and window",
+   "kinds": [
+    "door"
+   ],
+   "requires": [
+    {
+     "marycel": "location",
+     "is": "away"
+    }
+   ],
+   "effects": [
+    {
+     "marycel": "location",
+     "set": "at_object"
+    }
+   ],
+   "anim": "walk",
+   "ms": 0,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "switch_on",
+   "label": "Switch on",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "off"
+    }
+   ],
+   "effects": [
+    {
+     "state": "power",
+     "set": "on"
+    }
+   ],
+   "anim": "idle",
+   "ms": 800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "switch_off",
+   "label": "Switch off",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "power",
+     "set": "off"
+    }
+   ],
+   "anim": "idle",
+   "ms": 800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "start_computer",
+   "label": "Switch on the computer",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "off"
+    }
+   ],
+   "effects": [
+    {
+     "state": "power",
+     "set": "on"
+    }
+   ],
+   "anim": "idle",
+   "ms": 2000,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "shut_down",
+   "label": "Shut down the computer",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "power",
+     "set": "off"
+    },
+    {
+     "state": "app",
+     "set": "none"
+    },
+    {
+     "state": "display",
+     "set": "idle"
+    },
+    {
+     "state": "tape_playback",
+     "set": "stopped"
+    },
+    {
+     "state": "file_playback",
+     "set": "stopped"
+    }
+   ],
+   "effects_if": [
+    {
+     "when": [
+      {
+       "world": "recovery",
+       "is": "active"
+      }
+     ],
+     "effects": [
+      {
+       "world": "recovery",
+       "set": "interrupted"
+      },
+      {
+       "world": "passage",
+       "set": "uncertain"
+      }
+     ]
+    },
+    {
+     "when": [
+      {
+       "world": "transfer",
+       "is": "running"
+      }
+     ],
+     "effects": [
+      {
+       "world": "transfer",
+       "set": "failed"
+      },
+      {
+       "world": "passage",
+       "set": "uncertain"
+      }
+     ]
+    },
+    {
+     "when": [
+      {
+       "world": "video_copy",
+       "is": "copying"
+      }
+     ],
+     "effects": [
+      {
+       "world": "video_copy",
+       "set": "failed"
+      }
+     ]
+    }
+   ],
+   "anim": "idle",
+   "ms": 1500,
+   "notes": "Does not erase Elena, destroy the Echo or save the video. Running operations fail and the passage becomes uncertain.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "restart",
+   "label": "Restart the computer",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "none"
+    },
+    {
+     "state": "display",
+     "set": "idle"
+    },
+    {
+     "state": "tape_playback",
+     "set": "stopped"
+    },
+    {
+     "state": "file_playback",
+     "set": "stopped"
+    }
+   ],
+   "anim": "idle",
+   "ms": 3000,
+   "params": {
+    "target": "object id"
+   },
+   "effects_if": [
+    {
+     "when": [
+      {
+       "world": "recovery",
+       "is": "active"
+      }
+     ],
+     "effects": [
+      {
+       "world": "recovery",
+       "set": "interrupted"
+      },
+      {
+       "world": "passage",
+       "set": "uncertain"
+      }
+     ]
+    },
+    {
+     "when": [
+      {
+       "world": "transfer",
+       "is": "running"
+      }
+     ],
+     "effects": [
+      {
+       "world": "transfer",
+       "set": "failed"
+      },
+      {
+       "world": "passage",
+       "set": "uncertain"
+      }
+     ]
+    },
+    {
+     "when": [
+      {
+       "world": "video_copy",
+       "is": "copying"
+      }
+     ],
+     "effects": [
+      {
+       "world": "video_copy",
+       "set": "failed"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "check_connections",
+   "label": "Check the cables at the back",
+   "group": "Computer",
+   "kinds": [
+    "computer",
+    "printer",
+    "speakers"
+   ],
+   "requires": [],
+   "effects": [],
+   "anim": "pickup",
+   "ms": 1500,
+   "observes": "connections",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "read_screen",
+   "label": "Read the screen",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [],
+   "anim": "sit_type",
+   "ms": 2000,
+   "observes": "display",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "type_message",
+   "label": "Type on the keyboard",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [],
+   "anim": "sit_type",
+   "ms": 2500,
+   "speech": true,
+   "notes": "Elena reads typed text through the computer.",
+   "params": {
+    "target": "object id",
+    "text": "string"
+   }
+  },
+  {
+   "id": "insert_recording",
+   "label": "Put the tape in the deck",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": "recording"
+    },
+    {
+     "state": "tape_deck",
+     "is": "empty"
+    }
+   ],
+   "effects": [
+    {
+     "put_held": true
+    },
+    {
+     "state": "tape_deck",
+     "set": "recording"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "eject_recording",
+   "label": "Eject the tape",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "tape_deck",
+     "is": "recording"
+    },
+    {
+     "state": "tape_playback",
+     "is": "stopped"
+    }
+   ],
+   "effects": [
+    {
+     "take": "recording"
+    },
+    {
+     "state": "tape_deck",
+     "set": "empty"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "play_tape",
+   "label": "Play the tape",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "tape_deck",
+     "is": "recording"
+    }
+   ],
+   "effects": [
+    {
+     "state": "tape_playback",
+     "set": "playing"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 800,
+   "observes": "recording",
+   "params": {
+    "target": "object id"
+   },
+   "effects_if": [
+    {
+     "when": [
+      {
+       "world": "recording_status",
+       "is": "untouched"
+      }
+     ],
+     "effects": [
+      {
+       "world": "recording_status",
+       "set": "seen"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pause_tape",
+   "label": "Pause the tape",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "tape_playback",
+     "is": "playing"
+    }
+   ],
+   "effects": [
+    {
+     "state": "tape_playback",
+     "set": "paused"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 400,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "stop_tape",
+   "label": "Stop the tape",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "tape_playback",
+     "is": [
+      "playing",
+      "paused"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "state": "tape_playback",
+     "set": "stopped"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 400,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "insert_disk",
+   "label": "Insert the archive disk",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": "archive_disk"
+    },
+    {
+     "state": "disk",
+     "is": "none"
+    }
+   ],
+   "effects": [
+    {
+     "put_held": true
+    },
+    {
+     "state": "disk",
+     "set": "blank"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 900,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "eject_disk",
+   "label": "Eject the archive disk",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "disk",
+     "is": [
+      "blank",
+      "copied",
+      "verified"
+     ]
+    },
+    {
+     "world": "video_copy",
+     "not": [
+      "copying"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "take": "archive_disk"
+    },
+    {
+     "state": "disk",
+     "set": "none"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 900,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "connect_device",
+   "label": "Connect the transfer device",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": "transfer_device"
+    },
+    {
+     "state": "device",
+     "is": "none"
+    }
+   ],
+   "effects": [
+    {
+     "put_held": true
+    },
+    {
+     "state": "device",
+     "set": "connected"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "disconnect_device",
+   "label": "Disconnect the transfer device",
+   "group": "Computer",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "device",
+     "is": "connected"
+    },
+    {
+     "world": "transfer",
+     "is": [
+      "idle",
+      "stopped",
+      "completed",
+      "failed"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "take": "transfer_device"
+    },
+    {
+     "state": "device",
+     "set": "none"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_files",
+   "label": "Open the file list",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "files"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1200,
+   "observes": "file_list",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_video_file",
+   "label": "Open FAMILY_VIDEO",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "video"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "play_video_file",
+   "label": "Play the video file",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "video"
+    }
+   ],
+   "effects": [
+    {
+     "state": "file_playback",
+     "set": "playing"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 600,
+   "observes": "recording",
+   "params": {
+    "target": "object id"
+   },
+   "effects_if": [
+    {
+     "when": [
+      {
+       "world": "recording_status",
+       "is": "untouched"
+      }
+     ],
+     "effects": [
+      {
+       "world": "recording_status",
+       "set": "seen"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pause_video_file",
+   "label": "Pause the video file",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "file_playback",
+     "is": "playing"
+    }
+   ],
+   "effects": [
+    {
+     "state": "file_playback",
+     "set": "paused"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 300,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "seek_video",
+   "label": "Skip to a part of the video",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "video"
+    }
+   ],
+   "effects": [],
+   "anim": "sit_type",
+   "ms": 800,
+   "observes": "recording",
+   "notes": "Only playable parts; the damaged tail needs the recovery tool.",
+   "params": {
+    "target": "object id",
+    "position": [
+     "start",
+     "middle",
+     "end"
+    ]
+   }
+  },
+  {
+   "id": "open_damaged_segment",
+   "label": "Preview the damaged segment",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "video"
+    },
+    {
+     "world": "passage",
+     "is": [
+      "dormant",
+      "stirring"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "world": "passage",
+     "set": "stirring"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "observes": "damaged_segment",
+   "notes": "Story: the Echo can speak only after this exposure, and only through an audible route. Blocked once the output is isolated.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_notes",
+   "label": "Open the technician notes",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "notes"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1200,
+   "observes": "notes",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_log",
+   "label": "Open the recovery log",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "log"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1200,
+   "observes": "recovery_log",
+   "notes": "Shows Elena's interrupted pause and the separate playable-video source.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "run_diagnostics",
+   "label": "Run diagnostics",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "diagnostics"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 3000,
+   "observes": "device_status",
+   "notes": "Reports which outputs (screen, speakers, printer) are working.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_recovery",
+   "label": "Open the recovery tool",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "recovery"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1200,
+   "observes": "recovery_status",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "start_recovery",
+   "label": "Start full recovery",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "recovery"
+    },
+    {
+     "world": "recovery",
+     "is": [
+      "interrupted",
+      "paused",
+      "stopped"
+     ]
+    },
+    {
+     "world": "isolation",
+     "is": "off"
+    }
+   ],
+   "effects": [
+    {
+     "world": "recovery",
+     "set": "active"
+    },
+    {
+     "world": "passage",
+     "set": "active"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 20000,
+   "notes": "Risky: widens the passage. Elena may warn or ask for a pause. What a finished commit means for the Echo is not yet written (the passage becomes uncertain).",
+   "params": {
+    "target": "object id"
+   },
+   "on_complete": [
+    {
+     "world": "recovery",
+     "set": "completed"
+    },
+    {
+     "world": "passage",
+     "set": "uncertain"
+    }
+   ],
+   "interrupted_by": [
+    "shut_down",
+    "restart"
+   ],
+   "ended_by": [
+    "pause_recovery",
+    "stop_recovery"
+   ]
+  },
+  {
+   "id": "pause_recovery",
+   "label": "Pause recovery",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "world": "recovery",
+     "is": "active"
+    }
+   ],
+   "effects": [
+    {
+     "world": "recovery",
+     "set": "paused"
+    },
+    {
+     "world": "passage",
+     "set": "stirring"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "stop_recovery",
+   "label": "Stop recovery",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "world": "recovery",
+     "is": [
+      "active",
+      "paused",
+      "interrupted"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "world": "recovery",
+     "set": "stopped"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1000,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "isolate_output",
+   "label": "Isolate the damaged segment's output",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "recovery"
+    },
+    {
+     "world": "recovery",
+     "is": [
+      "interrupted",
+      "paused",
+      "stopped"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "world": "isolation",
+     "set": "on"
+    },
+    {
+     "world": "passage",
+     "set": "contained"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "notes": "Containment, not destruction; possible without running recovery again. Elena's separate working channel stays open.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "copy_playable_video",
+   "label": "Copy the playable video to the archive disk",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "recovery"
+    },
+    {
+     "state": "disk",
+     "is": "blank"
+    },
+    {
+     "world": "video_copy",
+     "is": [
+      "none",
+      "failed"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "world": "video_copy",
+     "set": "copying"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 6000,
+   "notes": "Uses the recovery tool's limited copy; does not open the damaged tail or run the full commit.",
+   "params": {
+    "target": "object id"
+   },
+   "on_complete": [
+    {
+     "world": "video_copy",
+     "set": "preserved"
+    },
+    {
+     "state": "disk",
+     "set": "copied"
+    },
+    {
+     "world": "recording_status",
+     "set": "preserved"
+    }
+   ],
+   "on_fail": [
+    {
+     "world": "video_copy",
+     "set": "failed"
+    }
+   ],
+   "interrupted_by": [
+    "shut_down",
+    "restart"
+   ]
+  },
+  {
+   "id": "verify_copy",
+   "label": "Verify the copy",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "disk",
+     "is": "copied"
+    }
+   ],
+   "effects": [
+    {
+     "state": "disk",
+     "set": "verified"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 2500,
+   "observes": "copy_result",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open_map",
+   "label": "Open the recovery map",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "map"
+    },
+    {
+     "state": "display",
+     "set": "app"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "observes": "streams",
+   "notes": "Shows two unlabeled streams with route history; never names Elena or the Echo.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "compare_streams",
+   "label": "Compare the two streams",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "map"
+    }
+   ],
+   "effects": [],
+   "anim": "sit_type",
+   "ms": 3000,
+   "observes": "stream_history",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "select_stream",
+   "label": "Select a stream",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": "map"
+    }
+   ],
+   "effects": [
+    {
+     "world": "selected_stream",
+     "set": "$choice"
+    },
+    {
+     "world": "transfer_consent",
+     "set": "none"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 800,
+   "choices": [
+    "stream_a",
+    "stream_b"
+   ],
+   "params": {
+    "target": "object id",
+    "choice": [
+     "stream_a",
+     "stream_b"
+    ]
+   }
+  },
+  {
+   "id": "ask_before_transfer",
+   "label": "Ask Elena before transferring",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "world": "selected_stream",
+     "is": [
+      "stream_a",
+      "stream_b"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "world": "transfer_consent",
+     "set": "asked"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "speech": true,
+   "notes": "Opens Elena's chance to answer. If she sends nothing by the end of the next reaction round the game sets no_answer.",
+   "params": {
+    "target": "object id",
+    "text": "string"
+   }
+  },
+  {
+   "id": "start_transfer",
+   "label": "Transfer the selected stream",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "device",
+     "is": "connected"
+    },
+    {
+     "world": "passage",
+     "is": "contained"
+    },
+    {
+     "world": "selected_stream",
+     "is": [
+      "stream_a",
+      "stream_b"
+     ]
+    },
+    {
+     "world": "transfer_consent",
+     "is": "agreed"
+    }
+   ],
+   "effects": [
+    {
+     "world": "transfer",
+     "set": "running"
+    },
+    {
+     "world": "passage",
+     "set": "transfer"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 12000,
+   "notes": "Needs Elena to have been asked and to have answered or had no answer. Marycel may still go ahead after 'declined'; the ending weighs it. Completion records which stream moved, not who Marycel believes it is.",
+   "params": {
+    "target": "object id"
+   },
+   "on_complete": [
+    {
+     "world": "transfer",
+     "set": "completed"
+    }
+   ],
+   "on_fail": [
+    {
+     "world": "transfer",
+     "set": "failed"
+    },
+    {
+     "world": "passage",
+     "set": "uncertain"
+    }
+   ],
+   "interrupted_by": [
+    "shut_down",
+    "restart"
+   ],
+   "ended_by": [
+    "stop_transfer"
+   ]
+  },
+  {
+   "id": "stop_transfer",
+   "label": "Stop the transfer",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "world": "transfer",
+     "is": "running"
+    }
+   ],
+   "effects": [
+    {
+     "world": "transfer",
+     "set": "stopped"
+    },
+    {
+     "world": "passage",
+     "set": "contained"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "enable_printing",
+   "label": "Turn on printing from the computer",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "device": "printer",
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "device": "printer",
+     "state": "cable",
+     "is": "connected"
+    }
+   ],
+   "effects": [
+    {
+     "state": "print_route",
+     "set": "on"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "notes": "Unlocks Elena's print_message signal.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "print_file",
+   "label": "Print the open file",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "print_route",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": [
+      "notes",
+      "log",
+      "map"
+     ]
+    },
+    {
+     "device": "printer",
+     "state": "paper",
+     "is": "loaded"
+    },
+    {
+     "device": "printer",
+     "state": "output",
+     "is": "none"
+    },
+    {
+     "device": "printer",
+     "state": "jam",
+     "is": "no"
+    },
+    {
+     "device": "printer",
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "device": "printer",
+     "state": "cable",
+     "is": "connected"
+    }
+   ],
+   "effects": [
+    {
+     "device": "printer",
+     "state": "output",
+     "set": "printed"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "close_program",
+   "label": "Close the program",
+   "group": "Computer programs",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "display",
+     "is": "app"
+    }
+   ],
+   "effects": [
+    {
+     "state": "app",
+     "set": "none"
+    },
+    {
+     "state": "display",
+     "set": "idle"
+    },
+    {
+     "state": "file_playback",
+     "set": "stopped"
+    }
+   ],
+   "anim": "sit_type",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "connect_speakers",
+   "label": "Plug in the speakers",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "connected",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "state": "connected",
+     "set": "yes"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "disconnect_speakers",
+   "label": "Unplug the speakers",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "connected",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "state": "connected",
+     "set": "no"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "mute",
+   "label": "Mute",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "muted",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "state": "muted",
+     "set": "yes"
+    }
+   ],
+   "anim": "idle",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "unmute",
+   "label": "Unmute",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "muted",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "state": "muted",
+     "set": "no"
+    }
+   ],
+   "anim": "idle",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "volume_up",
+   "label": "Turn the volume up",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "volume",
+     "is": [
+      "low",
+      "medium"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "state": "volume",
+     "set": "+1"
+    }
+   ],
+   "anim": "idle",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "volume_down",
+   "label": "Turn the volume down",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "speakers"
+   ],
+   "requires": [
+    {
+     "state": "volume",
+     "is": [
+      "medium",
+      "high"
+     ]
+    }
+   ],
+   "effects": [
+    {
+     "state": "volume",
+     "set": "-1"
+    }
+   ],
+   "anim": "idle",
+   "ms": 500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "test_sound",
+   "label": "Play a test sound",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [],
+   "anim": "sit_type",
+   "ms": 1200,
+   "observes": "audio_route",
+   "notes": "Tells her whether the speakers or headphones are working.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "plug_in_headphones",
+   "label": "Plug the headphones into the computer",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": "headphones"
+    },
+    {
+     "item_state": "headphones.plugged",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "item_state": "headphones.plugged",
+     "set": "yes"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 900,
+   "notes": "She keeps holding them.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "unplug_headphones",
+   "label": "Unplug the headphones",
+   "group": "Speakers and headphones",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "item_state": "headphones.plugged",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "item_state": "headphones.plugged",
+     "set": "no"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 700,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "put_on_headphones",
+   "label": "Put on the headphones",
+   "group": "Speakers and headphones",
+   "kinds": [],
+   "requires": [
+    {
+     "holding": "headphones"
+    }
+   ],
+   "effects": [
+    {
+     "move_held_to": "worn"
+    },
+    {
+     "item_state": "headphones.worn",
+     "set": "yes"
+    }
+   ],
+   "anim": "idle",
+   "ms": 900,
+   "notes": "Worn headphones leave her hands free; while worn she may miss room sounds.",
+   "params": {}
+  },
+  {
+   "id": "take_off_headphones",
+   "label": "Take off the headphones",
+   "group": "Speakers and headphones",
+   "kinds": [],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "item_state": "headphones.worn",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "item_state": "headphones.worn",
+     "set": "no"
+    },
+    {
+     "take": "headphones"
+    }
+   ],
+   "anim": "idle",
+   "ms": 700,
+   "params": {},
+   "notes": "The headphones keep their plugged-in state."
+  },
+  {
+   "id": "connect_cable",
+   "label": "Connect the printer cable",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "holding": "cable"
+    },
+    {
+     "state": "cable",
+     "is": "disconnected"
+    }
+   ],
+   "effects": [
+    {
+     "consume_held": true
+    },
+    {
+     "state": "cable",
+     "set": "connected"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "disconnect_cable",
+   "label": "Disconnect the printer cable",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "cable",
+     "is": "connected"
+    }
+   ],
+   "effects": [
+    {
+     "state": "cable",
+     "set": "disconnected"
+    },
+    {
+     "create_held": "cable"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "load_paper",
+   "label": "Load paper",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "holding": "paper"
+    },
+    {
+     "state": "paper",
+     "is": "empty"
+    }
+   ],
+   "effects": [
+    {
+     "consume_held": true
+    },
+    {
+     "state": "paper",
+     "set": "loaded"
+    }
+   ],
+   "anim": "idle",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "remove_paper",
+   "label": "Take the paper out",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "paper",
+     "is": "loaded"
+    }
+   ],
+   "effects": [
+    {
+     "state": "paper",
+     "set": "empty"
+    },
+    {
+     "create_held": "paper"
+    }
+   ],
+   "anim": "idle",
+   "ms": 1200,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "print_test_page",
+   "label": "Print a test page",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "paper",
+     "is": "loaded"
+    },
+    {
+     "state": "output",
+     "is": "none"
+    },
+    {
+     "state": "jam",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "state": "output",
+     "set": "printed"
+    }
+   ],
+   "anim": "idle",
+   "ms": 2500,
+   "notes": "Works without the computer; proves the printer itself is fine.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "clear_jam",
+   "label": "Clear a paper jam",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "state": "jam",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "state": "jam",
+     "set": "no"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 2000,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "collect_printout",
+   "label": "Collect the printout",
+   "group": "Printer",
+   "kinds": [
+    "printer"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "state": "output",
+     "is": "printed"
+    }
+   ],
+   "effects": [
+    {
+     "state": "output",
+     "set": "none"
+    },
+    {
+     "create_held": "printout"
+    }
+   ],
+   "anim": "idle",
+   "ms": 800,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "open",
+   "label": "Open the box",
+   "group": "Storage box",
+   "kinds": [
+    "storage"
+   ],
+   "requires": [
+    {
+     "state": "open",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "state": "open",
+     "set": "yes"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 900,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "close",
+   "label": "Close the box",
+   "group": "Storage box",
+   "kinds": [
+    "storage"
+   ],
+   "requires": [
+    {
+     "state": "open",
+     "is": "yes"
+    }
+   ],
+   "effects": [
+    {
+     "state": "open",
+     "set": "no"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 900,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "search",
+   "label": "Look through the box",
+   "group": "Storage box",
+   "kinds": [
+    "storage"
+   ],
+   "requires": [
+    {
+     "state": "open",
+     "is": "yes"
+    }
+   ],
+   "effects": [],
+   "anim": "pickup",
+   "ms": 2000,
+   "observes": "contents",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "take",
+   "label": "Pick up an item",
+   "group": "Items",
+   "kinds": [
+    "storage",
+    "workbench",
+    "ofrenda",
+    "floor"
+   ],
+   "requires": [
+    {
+     "holding": null
+    },
+    {
+     "item_in_target": "*"
+    }
+   ],
+   "effects": [
+    {
+     "take": "*"
+    }
+   ],
+   "anim": "pickup",
+   "ms": 0,
+   "notes": "From a storage box only while it is open. Duration is the pickup animation.",
+   "params": {
+    "target": "object id",
+    "item": "item id"
+   },
+   "requires_by_kind": {
+    "storage": [
+     {
+      "state": "open",
+      "is": "yes"
+     }
+    ]
+   }
+  },
+  {
+   "id": "put",
+   "label": "Put down what she holds",
+   "group": "Items",
+   "kinds": [
+    "storage",
+    "workbench",
+    "ofrenda",
+    "floor"
+   ],
+   "requires": [
+    {
+     "holding": "*"
+    }
+   ],
+   "effects": [
+    {
+     "put_held": true
+    }
+   ],
+   "anim": "pickup",
+   "ms": 0,
+   "notes": "Into an open box, onto a free slot, or onto the floor in front of her.",
+   "params": {
+    "target": "object id",
+    "slot": "slot name (workbench, ofrenda); omit for a box or the floor"
+   },
+   "requires_by_kind": {
+    "storage": [
+     {
+      "state": "open",
+      "is": "yes"
+     }
+    ],
+    "workbench": [
+     {
+      "free_slot": true
+     }
+    ],
+    "ofrenda": [
+     {
+      "free_slot": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "read_held",
+   "label": "Read or look at what she holds",
+   "group": "Items",
+   "kinds": [],
+   "requires": [
+    {
+     "holding": "readable"
+    }
+   ],
+   "effects": [],
+   "anim": "read",
+   "ms": 2500,
+   "observes": "held_item",
+   "notes": "Printout, notebook or photograph. A printout counts as read only now.",
+   "params": {}
+  },
+  {
+   "id": "write_note",
+   "label": "Write in the notebook",
+   "group": "Items",
+   "kinds": [],
+   "requires": [
+    {
+     "holding": "notebook"
+    }
+   ],
+   "effects": [],
+   "anim": "read",
+   "ms": 3000,
+   "speech": true,
+   "notes": "Her written hypothesis is not a world fact.",
+   "params": {
+    "text": "string"
+   }
+  },
+  {
+   "id": "compare_photo",
+   "label": "Compare the photograph with the video",
+   "group": "Items",
+   "kinds": [
+    "computer"
+   ],
+   "requires": [
+    {
+     "holding": "photo"
+    },
+    {
+     "any": [
+      [
+       {
+        "state": "tape_playback",
+        "is": [
+         "playing",
+         "paused"
+        ]
+       }
+      ],
+      [
+       {
+        "state": "file_playback",
+        "is": [
+         "playing",
+         "paused"
+        ]
+       }
+      ]
+     ]
+    }
+   ],
+   "effects": [],
+   "anim": "read",
+   "ms": 3000,
+   "observes": "photo_and_recording",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "test_cable",
+   "label": "Test the cable with the meter",
+   "group": "Workbench",
+   "kinds": [
+    "workbench"
+   ],
+   "requires": [
+    {
+     "holding": "cable"
+    }
+   ],
+   "effects": [],
+   "anim": "idle",
+   "ms": 2500,
+   "observes": "cable_condition",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "examine_with_magnifier",
+   "label": "Examine an item under the magnifier",
+   "group": "Workbench",
+   "kinds": [
+    "workbench"
+   ],
+   "requires": [
+    {
+     "holding": "*"
+    }
+   ],
+   "effects": [],
+   "anim": "idle",
+   "ms": 2500,
+   "observes": "held_item_detail",
+   "notes": "For example the tape label or the back of the photo.",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "visit_ofrenda",
+   "label": "Stop at the ofrenda",
+   "group": "Ofrenda",
+   "kinds": [
+    "ofrenda"
+   ],
+   "requires": [],
+   "effects": [],
+   "anim": "idle",
+   "ms": 3000,
+   "observes": "ofrenda",
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "light_candles",
+   "label": "Light the candles",
+   "group": "Ofrenda",
+   "kinds": [
+    "ofrenda"
+   ],
+   "requires": [
+    {
+     "state": "candles",
+     "is": "unlit"
+    }
+   ],
+   "effects": [
+    {
+     "state": "candles",
+     "set": "lit"
+    }
+   ],
+   "anim": "idle",
+   "ms": 1500,
+   "params": {
+    "target": "object id"
+   }
+  },
+  {
+   "id": "put_out_candles",
+   "label": "Put out the candles",
+   "group": "Ofrenda",
+   "kinds": [
+    "ofrenda"
+   ],
+   "requires": [
+    {
+     "state": "candles",
+     "is": "lit"
+    }
+   ],
+   "effects": [
+    {
+     "state": "candles",
+     "set": "unlit"
+    }
+   ],
+   "anim": "idle",
+   "ms": 1000,
+   "params": {
+    "target": "object id"
+   }
+  }
+ ],
+ "signals": [
+  {
+   "id": "stay_silent",
+   "label": "Stay silent and watch",
+   "device": "computer",
+   "stage": 0,
+   "requires": [],
+   "effects": [],
+   "perceived_if": [],
+   "unlock": "start",
+   "params": {}
+  },
+  {
+   "id": "screen_message",
+   "label": "Show a short message on the screen",
+   "device": "computer",
+   "stage": 0,
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "display",
+     "set": "message"
+    }
+   ],
+   "max_chars": 12,
+   "perceived_if": [
+    {
+     "marycel_within": 160,
+     "facing_device": true
+    },
+    {
+     "doing": "read_screen"
+    }
+   ],
+   "unlock": "start",
+   "notes": "The message overlays whatever program is open; the program stays open underneath.",
+   "params": {
+    "text": "her words, up to 12 characters"
+   }
+  },
+  {
+   "id": "tone",
+   "label": "Play a short tone",
+   "device": "speakers",
+   "stage": 0,
+   "requires": [
+    {
+     "any": [
+      [
+       {
+        "state": "connected",
+        "is": "yes"
+       },
+       {
+        "state": "muted",
+        "is": "no"
+       }
+      ],
+      [
+       {
+        "item_state": "headphones.plugged",
+        "is": "yes"
+       }
+      ]
+     ]
+    }
+   ],
+   "effects": [],
+   "perceived_if": [
+    {
+     "in_room": true,
+     "route": "speakers"
+    },
+    {
+     "route": "headphones",
+     "item_state": "headphones.worn",
+     "is": "yes"
+    }
+   ],
+   "unlock": "start",
+   "params": {}
+  },
+  {
+   "id": "answer_typed",
+   "label": "Answer Marycel's typed question on the screen",
+   "device": "computer",
+   "stage": 1,
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "display",
+     "set": "message"
+    }
+   ],
+   "max_chars": 12,
+   "perceived_if": [
+    {
+     "doing": "read_screen"
+    },
+    {
+     "marycel_within": 160,
+     "facing_device": true
+    }
+   ],
+   "unlock": "start",
+   "notes": "Same short limit as screen_message until the text channel is repaired.",
+   "params": {
+    "text": "her words, up to 12 characters"
+   }
+  },
+  {
+   "id": "highlight_file",
+   "label": "Point to an existing file, note or log entry",
+   "device": "computer",
+   "stage": 1,
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "app",
+     "is": [
+      "files",
+      "notes",
+      "log",
+      "map",
+      "video"
+     ]
+    }
+   ],
+   "effects": [],
+   "perceived_if": [
+    {
+     "doing": "read_screen"
+    }
+   ],
+   "unlock": "file_route",
+   "notes": "Can only point at material that exists; she cannot create evidence.",
+   "choices": [
+    "family_video",
+    "damaged_tail",
+    "notes",
+    "recovery_log",
+    "recovery_map"
+   ],
+   "params": {
+    "choice": [
+     "family_video",
+     "damaged_tail",
+     "notes",
+     "recovery_log",
+     "recovery_map"
+    ]
+   }
+  },
+  {
+   "id": "play_fragment",
+   "label": "Play a fragment of the recording",
+   "device": "speakers",
+   "stage": 2,
+   "requires": [
+    {
+     "unlocked": "fragments"
+    },
+    {
+     "world": "recording_status",
+     "is": [
+      "seen",
+      "preserved"
+     ]
+    }
+   ],
+   "effects": [],
+   "perceived_if": [
+    {
+     "in_room": true,
+     "route": "speakers"
+    },
+    {
+     "route": "headphones",
+     "item_state": "headphones.worn",
+     "is": "yes"
+    }
+   ],
+   "unlock": "fragments",
+   "choices": [
+    "gathering",
+    "flower",
+    "working_late",
+    "warning"
+   ],
+   "params": {
+    "choice": [
+     "gathering",
+     "flower",
+     "working_late",
+     "warning"
+    ]
+   }
+  },
+  {
+   "id": "long_note",
+   "label": "Write a longer note on the screen",
+   "device": "computer",
+   "stage": 2,
+   "requires": [
+    {
+     "unlocked": "text_channel"
+    },
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [
+    {
+     "state": "display",
+     "set": "message"
+    }
+   ],
+   "max_chars": 120,
+   "perceived_if": [
+    {
+     "doing": "read_screen"
+    }
+   ],
+   "unlock": "text_channel",
+   "params": {
+    "text": "her words, up to 120 characters"
+   }
+  },
+  {
+   "id": "print_message",
+   "label": "Print a note",
+   "device": "printer",
+   "stage": 3,
+   "requires": [
+    {
+     "device": "computer",
+     "state": "print_route",
+     "is": "on"
+    },
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "state": "cable",
+     "is": "connected"
+    },
+    {
+     "state": "paper",
+     "is": "loaded"
+    },
+    {
+     "state": "output",
+     "is": "none"
+    },
+    {
+     "state": "jam",
+     "is": "no"
+    }
+   ],
+   "effects": [
+    {
+     "state": "output",
+     "set": "printed"
+    }
+   ],
+   "max_chars": 120,
+   "perceived_if": [
+    {
+     "doing": "read_held",
+     "holding": "printout"
+    }
+   ],
+   "unlock": "print_route",
+   "notes": "A printed page is not read until Marycel collects and reads it.",
+   "params": {
+    "text": "her words, up to 120 characters"
+   }
+  },
+  {
+   "id": "request_pause",
+   "label": "Ask Marycel to pause the recovery",
+   "device": "computer",
+   "stage": 4,
+   "requires": [
+    {
+     "world": "recovery",
+     "is": "active"
+    },
+    {
+     "state": "power",
+     "is": "on"
+    }
+   ],
+   "effects": [],
+   "perceived_if": [
+    {
+     "doing": "read_screen"
+    },
+    {
+     "marycel_within": 160,
+     "facing_device": true
+    }
+   ],
+   "unlock": "start",
+   "notes": "A warning, not a command: it cannot stop the recovery by itself.",
+   "params": {}
+  },
+  {
+   "id": "transfer_response",
+   "label": "Agree, decline or warn about the transfer",
+   "device": "computer",
+   "stage": 5,
+   "requires": [
+    {
+     "state": "power",
+     "is": "on"
+    },
+    {
+     "world": "transfer_consent",
+     "is": "asked"
+    }
+   ],
+   "effects": [
+    {
+     "world": "transfer_consent",
+     "set": "$choice"
+    }
+   ],
+   "choices": [
+    "agreed",
+    "declined",
+    "warned",
+    "more_tests"
+   ],
+   "perceived_if": [
+    {
+     "doing": "read_screen"
+    },
+    {
+     "in_room": true,
+     "route": "speakers"
+    }
+   ],
+   "unlock": "start",
+   "notes": "Only after Marycel asks. Recorded separately from her interpretation. Silence becomes no_answer, which is never consent.",
+   "params": {
+    "choice": [
+     "agreed",
+     "declined",
+     "warned",
+     "more_tests"
+    ]
+   }
+  }
+ ],
+ "unlocks": {
+  "start": {
+   "rule": "always",
+   "text": "Available from the first moment."
+  },
+  "file_route": {
+   "rule": {
+    "after_any": [
+     "open_files",
+     "open_notes",
+     "open_log",
+     "open_map",
+     "open_video_file"
+    ]
+   },
+   "text": "After Marycel first opens the file list, notes, log, map or video (story stage 1). Default; Dennis to confirm."
+  },
+  "fragments": {
+   "rule": {
+    "world": "recording_status",
+    "is": [
+     "seen",
+     "preserved"
+    ]
+   },
+   "text": "After Marycel has played the recording, tape or file (story stage 2). Default; Dennis to confirm."
+  },
+  "text_channel": {
+   "rule": {
+    "after_any": [
+     "run_diagnostics"
+    ]
+   },
+   "text": "After Marycel runs diagnostics with the computer on (story stage 2). Default; Dennis to confirm."
+  },
+  "print_route": {
+   "rule": {
+    "device": "computer",
+    "state": "print_route",
+    "is": "on"
+   },
+   "text": "After Marycel turns on printing from the computer, with the printer on and connected (story stage 3)."
+  }
+ },
+ "required_inventory": [
+  "computer",
+  "speakers|headphones",
+  "printer",
+  "cable",
+  "paper",
+  "recording",
+  "photo",
+  "workbench",
+  "notebook",
+  "storage",
+  "door",
+  "ofrenda",
+  "archive_disk",
+  "transfer_device"
+ ],
+ "marycel": {
+  "states": {
+   "location": [
+    "at_object",
+    "away"
+   ],
+   "seated": [
+    "yes",
+    "no"
+   ],
+   "holding": "one item kind or null"
+  },
+  "notes": "Marycel holds one item at a time. She perceives only what her location, facing and senses allow; her beliefs are stored separately from these facts. Walking is an animation between spots, not a stored location."
+ },
+ "world": {
+  "states": {
+   "recording_status": [
+    "untouched",
+    "seen",
+    "preserved"
+   ],
+   "recovery": [
+    "interrupted",
+    "active",
+    "paused",
+    "stopped",
+    "completed"
+   ],
+   "passage": [
+    "dormant",
+    "stirring",
+    "active",
+    "contained",
+    "transfer",
+    "uncertain"
+   ],
+   "isolation": [
+    "off",
+    "on"
+   ],
+   "video_copy": [
+    "none",
+    "copying",
+    "preserved",
+    "failed"
+   ],
+   "selected_stream": [
+    "none",
+    "stream_a",
+    "stream_b"
+   ],
+   "transfer": [
+    "idle",
+    "running",
+    "stopped",
+    "completed",
+    "failed"
+   ],
+   "transfer_consent": [
+    "none",
+    "asked",
+    "agreed",
+    "declined",
+    "warned",
+    "more_tests",
+    "no_answer"
+   ]
+  },
+  "start": {
+   "recording_status": "untouched",
+   "recovery": "interrupted",
+   "passage": "dormant",
+   "isolation": "off",
+   "video_copy": "none",
+   "selected_stream": "none",
+   "transfer": "idle",
+   "transfer_consent": "none"
+  },
+  "notes": "Story facts per room, from the Story Bible's passage rules. Recovery starts 'interrupted': Elena paused it before its final commit years ago, so the log shows a pending commit and Marycel can contain the passage without running recovery again. Only executed actions and completion results change these facts; dialogue never does. Recording damage or loss is not modelled: no action in the story can destroy the playable video; a failed copy only leaves video_copy at failed."
+ },
+ "action_format": {
+  "shape": {
+   "action": "action id",
+   "target": "object id in this room (required when the action lists kinds)",
+   "item": "item id (take only; put always places the item she holds)",
+   "slot": "slot name (put on a workbench or ofrenda)",
+   "text": "her words (actions with speech: true)",
+   "choice": "one of the action's choices",
+   "position": "start | middle | end (seek_video)",
+   "line": "one short sentence she says or thinks; never changes the world (voiced later)"
+  },
+  "example": {
+   "action": "connect_cable",
+   "target": "printer"
+  },
+  "notes": "This is the exact JSON the model must output for each step; training examples use the same shape. The game validates every field except line, which it only shows or voices.",
+  "created_items": "An item an action creates gets its kind as id (printout), then kind_2, kind_3 for later ones; the observation shows the id."
+ },
+ "semantics": [
+  "A condition's 'is' may be a list: any listed value matches. 'not' (a list) means none of the listed values may match.",
+  "Effect value '+1' or '-1' steps one place through the state's value list in its listed order; '$choice' uses the action's or signal's chosen value.",
+  "perceived_if is a list of alternatives (OR); the keys inside one alternative must all hold (AND).",
+  "When both speakers and plugged headphones could carry a sound, it goes to the headphones if they are plugged in, otherwise to the speakers.",
+  "{device: kind} refers to the one object of that kind in the room (object ids equal kinds). A condition on an item or device the room does not have is false.",
+  "requires_by_kind adds requirements only when the target is of that kind.",
+  "Long actions with on_complete / on_fail: effects apply at the start; on_complete applies when the duration ends uninterrupted; on_fail applies if a listed interruption happens first (interrupted_by).",
+  "effects_if applies extra effects only when its 'when' conditions hold at the moment the action runs.",
+  "Animation 'sit_type' means she types seated: if she is standing the game first walks her to the computer's sit_x and plays sit_down.",
+  "Draw order: room background, objects in room-file order, items, then Marycel. Seated Marycel is drawn over the chair and desk.",
+  "ended_by actions stop a long action cleanly with their own effects (no on_fail); interrupted_by actions make it fail (on_fail, or the effects_if on shut_down and restart).",
+  "While Marycel is away (left the room), the only action she can take is return.",
+  "While seated she can still speak, type and use the computer; any other action at an object stands her up first (the game plays stand_up).",
+  "A refused action changes nothing, not even where she stands.",
+  "What Marycel perceives comes from data/content.json and the live state (tools/observe.py). Observations never say who sent a signal.",
+  "A sound is heard only when it happens: through plugged headphones she is wearing, or through working speakers while she is in the room. Screen text stays until she uses the computer for something else or it powers off; a printout keeps its text."
+ ],
+ "echo": {
+  "notes": "The Echo is not controlled by the model or the player. The game produces its outputs from these rules and logs each one with its true source, which only the author view shows. Default rules; Dennis to confirm.",
+  "events": [
+   {
+    "id": "echo_repeat_phrase",
+    "label": "Repeats a phrase from the family clip",
+    "requires": [
+     {
+      "world": "passage",
+      "is": [
+       "stirring",
+       "active"
+      ]
+     },
+     {
+      "world": "isolation",
+      "is": "off"
+     },
+     {
+      "any": [
+       [
+        {
+         "device": "speakers",
+         "state": "connected",
+         "is": "yes"
+        },
+        {
+         "device": "speakers",
+         "state": "muted",
+         "is": "no"
+        }
+       ],
+       [
+        {
+         "item_state": "headphones.plugged",
+         "is": "yes"
+        }
+       ]
+      ]
+     }
+    ],
+    "route": "same as tone",
+    "perceived_if": "same as tone",
+    "notes": "Exact wording comes only from the damaged segment Marycel has opened.",
+    "params": {
+     "phrase": "a phrase from the damaged segment Marycel has opened"
+    }
+   },
+   {
+    "id": "echo_screen_flicker",
+    "label": "Imitates Elena on the screen",
+    "requires": [
+     {
+      "world": "passage",
+      "is": "active"
+     },
+     {
+      "world": "isolation",
+      "is": "off"
+     },
+     {
+      "device": "computer",
+      "state": "power",
+      "is": "on"
+     }
+    ],
+    "route": "screen",
+    "perceived_if": "same as screen_message",
+    "notes": "Only during active recovery; limited to material already exposed.",
+    "params": {
+     "phrase": "a phrase from material Marycel has already played or opened"
+    }
+   }
+  ]
+ },
+ "game_events": {
+  "notes": "Game-driven state changes that no actor chooses.",
+  "events": [
+   {
+    "id": "consent_timeout",
+    "label": "Elena stays silent after Marycel asks",
+    "after": "one reaction round",
+    "requires": [
+     {
+      "world": "transfer_consent",
+      "is": "asked"
+     }
+    ],
+    "effects": [
+     {
+      "world": "transfer_consent",
+      "set": "no_answer"
+     }
+    ]
+   }
+  ]
+ }
+}

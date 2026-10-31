@@ -1,0 +1,35 @@
+{
+ "train": {
+  "episodes": 240,
+  "examples": 4607,
+  "outcomes": {
+   "transfer": 191,
+   "declined": 46,
+   "unresolved": 3
+  },
+  "kinds": {
+   "routine": 1911,
+   "reaction": 665,
+   "fix_after_refusal": 168,
+   "decision": 344,
+   "consent": 1519
+  },
+  "distinct_actions": 48,
+  "approx_tokens": 6735042,
+  "policy_problems": 0
+ },
+ "eval_consent": {
+  "episodes": 30,
+  "examples": 178,
+  "outcomes": {
+   "transfer": 23,
+   "declined": 7
+  },
+  "kinds": {
+   "consent": 178
+  },
+  "distinct_actions": 12,
+  "approx_tokens": 273166,
+  "policy_problems": 0
+ }
+}

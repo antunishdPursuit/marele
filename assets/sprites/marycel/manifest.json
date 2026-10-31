@@ -1,0 +1,421 @@
+{
+  "character": "Marycel",
+  "generated_by": "tools/build_character_sprites.py",
+  "flip_for_left": "Mirror horizontally; the origin x becomes cell_width - origin_x.",
+  "outfits": {
+    "star-sweater": {
+      "outfit": "star-sweater",
+      "scales": {
+        "hd": {
+          "cell": [
+            235,
+            332
+          ],
+          "origin": [
+            106,
+            328
+          ],
+          "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
+          "animations": {
+            "idle": {
+              "sheet": "idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                600,
+                500
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "walk": {
+              "sheet": "walk.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                120,
+                120,
+                120
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pickup": {
+              "sheet": "pickup.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "pickup_and_read": {
+              "sheet": "pickup_and_read.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                900
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "read": {
+              "sheet": "read.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_type": {
+              "sheet": "sit_type.png",
+              "frame_count": 2,
+              "durations_ms": [
+                160,
+                160
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            }
+          }
+        },
+        "native": {
+          "cell": [
+            82,
+            114
+          ],
+          "origin": [
+            37,
+            113
+          ],
+          "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
+          "animations": {
+            "idle": {
+              "sheet": "idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                600,
+                500
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "walk": {
+              "sheet": "walk.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                120,
+                120,
+                120
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pickup": {
+              "sheet": "pickup.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "pickup_and_read": {
+              "sheet": "pickup_and_read.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                900
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "read": {
+              "sheet": "read.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_type": {
+              "sheet": "sit_type.png",
+              "frame_count": 2,
+              "durations_ms": [
+                160,
+                160
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            }
+          }
+        }
+      }
+    },
+    "green-cardigan": {
+      "outfit": "green-cardigan",
+      "scales": {
+        "hd": {
+          "cell": [
+            236,
+            332
+          ],
+          "origin": [
+            124,
+            328
+          ],
+          "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
+          "animations": {
+            "idle": {
+              "sheet": "idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                600,
+                500
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "walk": {
+              "sheet": "walk.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                120,
+                120,
+                120
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pickup": {
+              "sheet": "pickup.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "pickup_and_read": {
+              "sheet": "pickup_and_read.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                900
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "read": {
+              "sheet": "read.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_type": {
+              "sheet": "sit_type.png",
+              "frame_count": 2,
+              "durations_ms": [
+                160,
+                160
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            }
+          }
+        },
+        "native": {
+          "cell": [
+            82,
+            114
+          ],
+          "origin": [
+            43,
+            113
+          ],
+          "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
+          "animations": {
+            "idle": {
+              "sheet": "idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                600,
+                500
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "walk": {
+              "sheet": "walk.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                120,
+                120,
+                120
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pickup": {
+              "sheet": "pickup.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "pickup_and_read": {
+              "sheet": "pickup_and_read.png",
+              "frame_count": 9,
+              "durations_ms": [
+                120,
+                90,
+                80,
+                90,
+                140,
+                260,
+                100,
+                90,
+                900
+              ],
+              "loop": false,
+              "events": {
+                "grab": 5,
+                "item_in_hand": 7
+              },
+              "faces": "right"
+            },
+            "read": {
+              "sheet": "read.png",
+              "frame_count": 2,
+              "durations_ms": [
+                700,
+                600
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_type": {
+              "sheet": "sit_type.png",
+              "frame_count": 2,
+              "durations_ms": [
+                160,
+                160
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+ "ofrenda": [
+  {
+   "file": "ofrenda-1.ogg",
+   "seed": 1478133169,
+   "source": "ofrenda-1478133169.flac"
+  },
+  {
+   "file": "ofrenda-2.ogg",
+   "seed": 3189388153,
+   "source": "ofrenda-3189388153.flac"
+  },
+  {
+   "file": "ofrenda-3.ogg",
+   "seed": 2894032880,
+   "source": "ofrenda-2894032880.flac"
+  },
+  {
+   "file": "ofrenda-4.ogg",
+   "seed": 1021110917,
+   "source": "ofrenda-1021110917.flac"
+  }
+ ],
+ "workshop": [
+  {
+   "file": "workshop-1.ogg",
+   "seed": 3044820887,
+   "source": "workshop-3044820887.flac"
+  },
+  {
+   "file": "workshop-2.ogg",
+   "seed": 1375291100,
+   "source": "workshop-1375291100.flac"
+  },
+  {
+   "file": "workshop-3.ogg",
+   "seed": 2659410553,
+   "source": "workshop-2659410553.flac"
+  },
+  {
+   "file": "workshop-4.ogg",
+   "seed": 551307983,
+   "source": "workshop-551307983.flac"
+  }
+ ],
+ "passage": [
+  {
+   "file": "passage-1.ogg",
+   "seed": 2247166776,
+   "source": "passage-2247166776.flac"
+  },
+  {
+   "file": "passage-2.ogg",
+   "seed": 2676025530,
+   "source": "passage-2676025530.flac"
+  },
+  {
+   "file": "passage-3.ogg",
+   "seed": 3434261908,
+   "source": "passage-3434261908.flac"
+  },
+  {
+   "file": "passage-4.ogg",
+   "seed": 547541072,
+   "source": "passage-547541072.flac"
+  }
+ ],
+ "morning": [
+  {
+   "file": "morning-1.ogg",
+   "seed": 2580301007,
+   "source": "morning-2580301007.flac"
+  },
+  {
+   "file": "morning-2.ogg",
+   "seed": 4164255303,
+   "source": "morning-4164255303.flac"
+  },
+  {
+   "file": "morning-3.ogg",
+   "seed": 2581206436,
+   "source": "morning-2581206436.flac"
+  },
+  {
+   "file": "morning-4.ogg",
+   "seed": 3099751578,
+   "source": "morning-3099751578.flac"
+  }
+ ],
+ "home": [
+  {
+   "file": "home-1.ogg",
+   "seed": 3569865148,
+   "source": "home-3569865148.flac"
+  },
+  {
+   "file": "home-2.ogg",
+   "seed": 2900677829,
+   "source": "home-2900677829.flac"
+  },
+  {
+   "file": "home-3.ogg",
+   "seed": 1984225926,
+   "source": "home-1984225926.flac"
+  },
+  {
+   "file": "home-4.ogg",
+   "seed": 56173883,
+   "source": "home-56173883.flac"
+  }
+ ]
+}

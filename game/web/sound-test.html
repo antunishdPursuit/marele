@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Test</title>
+<link rel="stylesheet" href="/game/web/fonts.css">
+<link rel="stylesheet" href="/game/web/style.css">
+<style>
+  .wrap { max-width: 900px; margin: 0 auto; padding: 12px 16px 32px; }
+  .wrap h1 { margin-bottom: 4px; }
+  .sec { border-top: 2px solid var(--line); padding: 8px 0 10px; }
+  .sec h2 { margin: 4px 0 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .row button { min-width: 150px; text-align: left; }
+  .row button small { display: block; color: var(--dim); font-size: 13px; }
+  button[aria-pressed="true"] { border-color: var(--phosphor); color: var(--phosphor); }
+  .scene { font-size: 20px; padding: 6px 14px; }
+  #now { color: var(--warn); min-height: 1.3em; margin: 8px 0 0; }
+  label { display: inline-flex; gap: 8px; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sound Test</h1>
+  <p class="dim">Effects and loops are synthesized in code. Music takes are generated offline with ACE-Step 1.5 (MIT). Loops toggle on and off.</p>
+  <p><label>Volume <input id="vol" type="range" min="0" max="1" step="0.05" value="0.7"></label></p>
+
+  <div class="sec">
+    <h2>Play a scene</h2>
+    <button id="scene" class="scene" type="button">Play a 25-second scene</button>
+    <p id="now" aria-live="polite"></p>
+  </div>
+
+  <div class="sec">
+    <h2>Marycel's voice: samples</h2>
+    <p class="dim">Every sample reads the same five lines: "Copy the good part first. Always." / "Hi, Mom. Hi, Dad. Almost ready for you." / "That voice came from the speakers." / "Is this you? Can I move you to the new drive?" / "Hold on. I've got you."</p>
+    <div id="voices"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Music takes (ACE-Step 1.5, MIT)</h2>
+    <p class="dim">Four takes per mood, one minute each, generated offline. Note the ones you like by mood and number.</p>
+    <div id="music"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Background loops</h2>
+    <div class="row" id="loops"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Elena</h2>
+    <div class="row" data-group="elena"></div>
+  </div>
+  <div class="sec">
+    <h2>The Echo</h2>
+    <div class="row" data-group="echo"></div>
+  </div>
+  <div class="sec">
+    <h2>Marycel and the room</h2>
+    <div class="row" data-group="room"></div>
+  </div>
+  <div class="sec">
+    <h2>The machine</h2>
+    <div class="row" data-group="machine"></div>
+  </div>
+  <div class="sec">
+    <h2>Endings</h2>
+    <div class="row" data-group="endings"></div>
+  </div>
+</div>
+
+<script src="/game/web/sound.js"></script>
+<script>
+"use strict";
+const EFFECTS = {
+  elena: [["tone", "Tone", "her one clear signal"], ["screen", "Screen message", "letters appear"]],
+  echo: [["echo", "The Echo", "a voice that isn't one"]],
+  room: [["steps", "Footsteps", "wooden floor"], ["typing", "Typing", "old keyboard"], ["door", "Door", "needs oil"], ["refused", "Refused step", "that didn't work"]],
+  machine: [["tape", "Tape deck", "motor and hiss"], ["disk", "Drive", "seeking"], ["printer", "Printer", "dot-matrix note"], ["transfer", "Transfer", "a stream moves"]],
+  endings: [["bridge", "The bridge", "warm"], ["wrong_voice", "The wrong voice", "unsettled"]],
+};
+const LOOPS = [["ambience", "Night ambience", "wind, crickets, music box"], ["hum", "Computer hum", "mains and fan"],
+               ["drone", "Passage stirring", "low breathing drone"]];
+
+function button(label, sub) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.innerHTML = `${label}<small>${sub}</small>`;
+  return b;
+}
+for (const [group, list] of Object.entries(EFFECTS)) {
+  const row = document.querySelector(`[data-group="${group}"]`);
+  for (const [id, label, sub] of list) {
+    const b = button(label, sub);
+    b.addEventListener("click", () => Sound.play(id));
+    row.append(b);
+  }
+}
+const running = {};
+function toggle(id, on) {
+  const b = document.querySelector(`[data-loop="${id}"]`);
+  if (on === undefined) on = !running[id];
+  if (on && !running[id]) {
+    running[id] = Sound.loop(id);
+  } else if (!on && running[id]) { running[id](); delete running[id]; }
+  b.setAttribute("aria-pressed", String(!!running[id]));
+}
+const loopRow = document.getElementById("loops");
+for (const [id, label, sub] of LOOPS) {
+  const b = button(label, sub);
+  b.dataset.loop = id;
+  b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => toggle(id));
+  loopRow.append(b);
+}
+document.getElementById("vol").addEventListener("input", (e) => { Sound.volume(+e.target.value); });
+
+// Voice samples, listed from tools/voice_samples.py's index.
+const VOICE_GROUPS = [["kokoro", "Kokoro presets (Apache-2.0): fast enough to run live on the CPU"],
+                      ["design", "Designed voices (Qwen3-TTS VoiceDesign, Apache-2.0): made from a written description"]];
+fetch("/game/web/audio/voice-samples/samples.json").then((r) => r.ok ? r.json() : {}).then((samples) => {
+  const box = document.getElementById("voices");
+  for (const [prefix, title] of VOICE_GROUPS) {
+    const names = Object.keys(samples).filter((n) => n.startsWith(prefix + "-"));
+    if (!names.length) continue;
+    const h = document.createElement("h3");
+    h.textContent = title;
+    h.style.cssText = "font-weight:600;font-size:16px;margin:10px 0 4px;color:var(--ink)";
+    box.append(h);
+    for (const n of names) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.alignItems = "center";
+      const label = document.createElement("span");
+      label.textContent = samples[n].label;
+      label.style.minWidth = "230px";
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "none";
+      audio.src = `/game/web/audio/voice-samples/${n}.wav`;
+      audio.addEventListener("play", () => document.querySelectorAll("audio").forEach((a) => { if (a !== audio) a.pause(); }));
+      row.append(label, audio);
+      box.append(row);
+    }
+  }
+});
+
+// Music takes, listed from the generator's log (tools/make_music.py).
+const MOODS = { ofrenda: "Ofrenda (candlelit night)", workshop: "Workshop (late night)", passage: "Passage (eerie)", morning: "Morning (endings)" };
+fetch("/game/web/audio/takes/log.jsonl").then((r) => r.ok ? r.text() : "").then((text) => {
+  const box = document.getElementById("music");
+  const takes = text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((t) => t.duration >= 60);
+  if (!takes.length) { box.textContent = "No takes yet."; return; }
+  for (const [mood, title] of Object.entries(MOODS)) {
+    const list = takes.filter((t) => t.cue === mood);
+    if (!list.length) continue;
+    const h = document.createElement("h3");
+    h.textContent = `${title}: ${list[0].keyscale}, ${list[0].bpm} BPM`;
+    h.style.cssText = "font-weight:600;font-size:16px;margin:10px 0 4px;color:var(--ink)";
+    box.append(h);
+    list.forEach((t, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.alignItems = "center";
+      const label = document.createElement("span");
+      label.textContent = `${mood} ${i + 1}`;
+      label.style.minWidth = "100px";
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "none";
+      audio.src = `/game/web/audio/takes/${t.file}`;
+      audio.title = `seed ${t.seed}`;
+      audio.addEventListener("play", () => document.querySelectorAll("#music audio").forEach((a) => { if (a !== audio) a.pause(); }));
+      row.append(label, audio);
+      box.append(row);
+    });
+  }
+});
+
+// A short night: Marycel works, Elena reaches out, the Echo answers, a transfer.
+const SCENE = [
+  [0, "Night. Marycel walks to the computer.", () => { toggle("ambience", true); toggle("hum", true); Sound.play("steps", 5); }],
+  [2.4, "She puts the tape in.", () => Sound.play("tape")],
+  [5, "She types.", () => Sound.play("typing", 12)],
+  [7.4, "Elena: a message on the screen.", () => Sound.play("screen")],
+  [9, "Elena: a tone.", () => Sound.play("tone")],
+  [11, "Something stirs in the machine.", () => toggle("drone", true)],
+  [13, "The Echo.", () => Sound.play("echo")],
+  [15.5, "She tries a step too early.", () => Sound.play("refused")],
+  [17, "The printer wakes up.", () => Sound.play("printer")],
+  [20.5, "The transfer.", () => Sound.play("transfer")],
+  [23.5, "The bridge.", () => { Sound.play("bridge"); toggle("drone", false); }],
+  [28, "", () => { toggle("hum", false); toggle("ambience", false); }],
+];
+let timers = [];
+document.getElementById("scene").addEventListener("click", () => {
+  timers.forEach(clearTimeout);
+  timers = SCENE.map(([t, text, fn]) => setTimeout(() => { document.getElementById("now").textContent = text; fn(); }, t * 1000));
+});
+</script>
+</body>
+</html>

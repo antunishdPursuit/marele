@@ -1,0 +1,162 @@
+{
+ "id": "home-workshop",
+ "label": "Family home becoming a workshop",
+ "situation": "Domestic wallpaper and inherited furniture, partially unpacked and slightly unsettling. The speakers are not plugged in yet. The printer is connected and loaded but switched off, with a paper jam from the move. The recording and notebook are still in an open moving box.",
+ "marycel_start": {
+  "at": "computer",
+  "facing": "left"
+ },
+ "objects": [
+  {
+   "id": "workbench",
+   "kind": "workbench",
+   "x": 120,
+   "base": 184,
+   "stand_x": 222,
+   "facing": "left"
+  },
+  {
+   "id": "storage",
+   "kind": "storage",
+   "x": 252,
+   "base": 184,
+   "stand_x": 296,
+   "facing": "left",
+   "state": {
+    "open": "yes"
+   }
+  },
+  {
+   "id": "printer_table",
+   "kind": "printer_table",
+   "x": 440,
+   "base": 184
+  },
+  {
+   "id": "printer",
+   "kind": "printer",
+   "x": 447,
+   "base": 146,
+   "stand_x": 510,
+   "facing": "left",
+   "state": {
+    "power": "off",
+    "cable": "connected",
+    "paper": "loaded",
+    "output": "none",
+    "jam": "yes"
+   }
+  },
+  {
+   "id": "ofrenda",
+   "kind": "ofrenda",
+   "x": 560,
+   "base": 184,
+   "stand_x": 628,
+   "facing": "left",
+   "state": {
+    "candles": "unlit"
+   }
+  },
+  {
+   "id": "window",
+   "kind": "window",
+   "stand_x": 580,
+   "facing": "right"
+  },
+  {
+   "id": "desk",
+   "kind": "desk",
+   "x": 700,
+   "base": 184
+  },
+  {
+   "id": "speakers",
+   "kind": "speakers",
+   "x": 701,
+   "base": 136,
+   "stand_x": 786,
+   "facing": "left",
+   "state": {
+    "connected": "no",
+    "muted": "no",
+    "volume": "low"
+   }
+  },
+  {
+   "id": "computer",
+   "kind": "computer",
+   "x": 712,
+   "base": 136,
+   "stand_x": 786,
+   "facing": "left",
+   "state": {
+    "power": "on",
+    "display": "idle",
+    "app": "none",
+    "tape_deck": "empty",
+    "tape_playback": "stopped",
+    "file_playback": "stopped",
+    "disk": "none",
+    "device": "none",
+    "print_route": "off"
+   },
+   "sit_x": 721
+  },
+  {
+   "id": "keyboard",
+   "kind": "keyboard",
+   "x": 738,
+   "base": 136
+  },
+  {
+   "id": "chair",
+   "kind": "chair",
+   "x": 712,
+   "base": 184
+  },
+  {
+   "id": "door",
+   "kind": "door",
+   "stand_x": 876,
+   "facing": "right"
+  }
+ ],
+ "items": [
+  {
+   "id": "recording",
+   "kind": "recording",
+   "in": "storage"
+  },
+  {
+   "id": "notebook",
+   "kind": "notebook",
+   "in": "storage"
+  },
+  {
+   "id": "photo",
+   "kind": "photo",
+   "on": [
+    "ofrenda",
+    "riser"
+   ]
+  },
+  {
+   "id": "archive_disk",
+   "kind": "archive_disk",
+   "in": "storage"
+  },
+  {
+   "id": "transfer_device",
+   "kind": "transfer_device",
+   "on": [
+    "workbench",
+    "bench_top"
+   ]
+  }
+ ],
+ "hidden": {
+  "elena_stream": "stream_a",
+  "notes": "Author-only truth: which recovery-map stream is Elena's anchor. Never shown to Marycel or the player."
+ }
+}

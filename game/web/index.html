@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marele</title>
+<link rel="stylesheet" href="/game/web/fonts.css">
+<link rel="stylesheet" href="/game/web/style.css">
+</head>
+<body>
+<header class="bar">
+  <h1>Marele</h1>
+  <span id="status" class="status" role="status">Loading...</span>
+  <div class="bar-buttons">
+    <button id="sound" type="button" aria-pressed="true">Sound on</button>
+    <button id="pause" type="button" disabled>Pause</button>
+    <button id="end" type="button" disabled>End the night</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage" aria-label="Rooms">
+    <div class="room-head">
+      <h2 id="room-title">Room</h2>
+      <span id="room-facts" class="facts"></span>
+    </div>
+    <div class="view-wrap">
+      <canvas id="view" width="640" height="224" aria-label="Active room"></canvas>
+      <div id="tip" class="tip" hidden></div>
+      <div id="banner" class="banner" hidden></div>
+    </div>
+    <p id="subtitle" class="subtitle" aria-live="polite"></p>
+    <div class="previews" id="previews"></div>
+  </section>
+
+  <aside class="panel" aria-label="Elena">
+    <h2>Elena's signals</h2>
+    <p class="hint">One signal reaches all three rooms. Each Marycel notices it only if she can see or hear it from where she is.</p>
+    <div id="signals"></div>
+    <div id="feedback" class="feedback" aria-live="polite"></div>
+    <h2>What happened <span id="log-room" class="dim"></span></h2>
+    <ol id="log" class="log"></ol>
+  </aside>
+</main>
+
+<div id="intro" class="overlay">
+  <div class="card">
+    <h2>Día de Muertos, after midnight</h2>
+    <p>You are <b>Tía Elena</b>. Years ago a recovery on the family computer went wrong, and your voice was left inside it.</p>
+    <p>Tonight, in three rooms, three versions of your niece <b>Marycel</b> sit down with that same old machine to save the family video for the ofrenda. She decides for herself what to do next. You can only reach her through the computer: a few letters on the screen, a tone, a printed note, a fragment of the old recording.</p>
+    <p>Something else is in there with you. It can only repeat what Marycel has already played.</p>
+    <p class="dim">Watch, choose your moments, and answer her honestly. Click a preview to switch rooms.</p>
+    <button id="start" type="button" disabled>Begin</button>
+    <p id="intro-error" class="error"></p>
+  </div>
+</div>
+
+<div id="ending" class="overlay" hidden>
+  <div class="card wide">
+    <h2>Morning</h2>
+    <div id="outcomes" class="outcomes"></div>
+    <button id="again" type="button">Play another night</button>
+  </div>
+</div>
+
+<script src="/game/web/sound.js"></script>
+<script src="/game/web/game.js"></script>
+</body>
+</html>

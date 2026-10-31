@@ -1,0 +1,22 @@
+# Render Blueprint: the hosted copy of the game. Marycel's steps come from the
+# same fine-tuned checkpoint on Tinker; TINKER_API_KEY is set in the Render
+# dashboard (sync: false keeps it out of this file).
+services:
+  - type: web
+    name: marele
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -u game/server.py
+    healthCheckPath: /game/web/index.html
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: HOST
+        value: 0.0.0.0
+      - key: MARYCEL_BACKEND
+        value: tinker
+      - key: DAILY_STEP_LIMIT
+        value: "6000"
+      - key: TINKER_API_KEY
+        sync: false

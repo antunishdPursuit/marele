@@ -1,0 +1,21 @@
+# secrets and local environments
+.env
+.venv/
+__pycache__/
+*.pyc
+.claude/
+
+# large or generated files kept on the build machine
+data/models/
+data/training/*
+!data/training/summary.json
+game/web/audio/takes/*
+!game/web/audio/takes/log.jsonl
+game/web/audio/voice-samples/
+game/web/audio/voice/tmp.wav
+assets/concept-art/
+
+# private research and scratch pages
+reports/
+research_notes/
+timeline-preview-test.html
