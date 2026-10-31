@@ -159,7 +159,7 @@ def explain(e: Refused, w, target) -> str:
         elif "device" in t or "state" in t:
             obj = w.device(t["device"]) if "device" in t else w.objects.get(target)
             if obj is None:
-                reasons.append(f"there is no {t['device']} here")
+                reasons.append(f"there is no {t['device']} here" if "device" in t else "it isn't possible yet")
                 continue
             cur = obj["state"].get(t["state"])
             if t["state"] == "app":

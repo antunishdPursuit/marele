@@ -441,7 +441,8 @@ class Handler(SimpleHTTPRequestHandler):
             where = "Tinker" if BACKEND == "tinker" else f"Ollama at {OLLAMA}"
             return self._json({"error": f"Can't reach {where} ({e.reason}). Is it running?"}, 503)
         except Exception as e:  # report, keep serving
-            return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
+            print(f"error on {self.path}: {type(e).__name__}: {e}", flush=True)
+            return self._json({"error": "Something went wrong on the server. Please try again."}, 500)
         return self.send_error(404)
 
 
