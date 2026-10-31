@@ -5,7 +5,7 @@
 
 const ROOM_W = 960, VIEW_W = 640, VIEW_H = 224, FOOT_Y = 198;
 const WALK_SPEED = 80;           // room pixels per second
-const CONSENT_WAIT_MS = 30000;   // a room waits this long for Elena's answer after Marycel asks
+const CONSENT_WAIT_MS = 45000;   // a room waits this long for Elena's answer after Marycel asks
 const ROUND_GAP_MS = 900;         // a breath between rounds, so Elena can watch and act
 const VOICE_WAIT_MS = 8000;       // the next round waits for her line to finish, up to this long
 const OUTFIT = "star-sweater";
@@ -569,7 +569,7 @@ async function sendSignal(s, input) {
     const v = input.value.trim();
     if (s.params.includes("text") && !v) {
       if (input.focus) input.focus();
-      $("feedback").textContent = "Type a few letters first.";
+      notice("Type a few letters first.");
       return;
     }
     params[input.name] = v;
@@ -596,6 +596,11 @@ async function sendSignal(s, input) {
       line.textContent = `${S.rooms[id].label}: ${word}${r.status === "unavailable" && r.why ? ` (${r.why})` : ""}`;
       fb.append(line);
     }
+    const open = S.order.filter((id) => res.results[id].status !== "ended");
+    const seen = open.filter((id) => res.results[id].status === "noticed").length;
+    const waiting = open.some((id) => res.results[id].why !== "she isn't waiting for an answer right now");
+    notice(s.id === "transfer_response" && open.length && !waiting ? "She isn't waiting for an answer right now." :
+      `Sent. ${seen} of ${open.length} rooms noticed it right away.`);
     if (s.id === "tone" || s.id === "play_fragment") sfx("tone");
     else if (s.id === "print_message") sfx("printer");
     else if (s.id !== "stay_silent") sfx("screen");
@@ -670,7 +675,7 @@ function renderAsk(room, rt) {
     setTimeout(() => { if (S.active) renderPanel(); }, rt.answer.until - performance.now() + 50);
     return;
   }
-  banner.querySelector(".q").textContent = `Marycel asks you: "${room.question}"`;
+  banner.querySelector(".q").textContent = `Marycel asks you: "${room.question}" She waits about ${CONSENT_WAIT_MS / 1000} seconds.`;
   const s = S.signals.find((x) => x.id === "transfer_response");
   for (const c of s.choices) {
     const b = document.createElement("button");
@@ -814,7 +819,7 @@ const ENDINGS = {
   bridge: ["The bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes."],
   wrong_voice: ["The wrong voice", "The voice she moved was not Elena's. Something else got out of the machine."],
   promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut, and they can still talk."],
-  recording_survives: ["The recording survives", "The family video is safe, but Marycel never knew Elena was there."],
+  recording_survives: ["The recording survives", "The family video is safe. Elena's voice is still inside the old computer."],
   unresolved: ["Unresolved", "The night ended before any voice was moved or the video was saved."],
 };
 const FACT_WORDS = {
@@ -823,7 +828,7 @@ const FACT_WORDS = {
   passage: { dormant: "the way out stayed closed", stirring: "the way out was stirring", active: "the way out was open",
              contained: "the way out was shut again", transfer: "a voice crossed over", uncertain: "unclear if the way out is shut" },
 };
-const CONSENT_WORDS = { none: "she never asked you", asked: "she asked, and you didn't answer",
+const CONSENT_WORDS = { none: "she never asked you", asked: "her last question was still waiting for your answer",
                         no_answer: "she asked, and time ran out before you answered" };
 
 async function showEnding() {
