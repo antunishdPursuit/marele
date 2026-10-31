@@ -60,4 +60,5 @@ The code in this repository is MIT-licensed (see `LICENSE`). Everything it build
 - Marycel's model: Qwen3-8B (Apache-2.0) with a LoRA fine-tuned on Thinking Machines' Tinker; run locally with Ollama after conversion with llama.cpp (MIT).
 - Music: ACE-Step 1.5 (MIT code and weights), details in `game/web/audio/CREDITS.md`.
 - Marycel's voice: Qwen3-TTS 1.7B VoiceDesign (Apache-2.0), a designed voice, not a clone of anyone.
+- Title and morning screen backgrounds (`assets/screens/`): painted with OpenAI image generation, then prepared by `tools/build_screens.py`. The game draws the text, buttons and room snapshots on top.
 - Fonts: SIL Open Font License; license texts are in `game/web/fonts/`.
