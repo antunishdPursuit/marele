@@ -69,6 +69,8 @@ function setRooms(rooms) {
 
 function resetRooms(state) {
   S.rooms = {}; S.order = []; S.rt = {};
+  clearTimeout(S.noticeTimer);
+  $("notice").textContent = "";
   setRooms(state.rooms);
   S.active = S.order[0];
   S.signals = state.signals; S.files = state.files; S.fragments = state.fragments;
@@ -161,7 +163,60 @@ function updateWalk(rt, now) {
   rt.x = w.from + (w.to - w.from) * k;
 }
 
+// ------------------------------------------------------------------ title screen
+
+// The painted background (assets/screens/home.jpg, 1672x940) has Marycel at the
+// computer but no text; the monitor's title and the candle light are drawn over
+// it here. Positions are in the painting's pixels.
+const HOME = {
+  bg: "/assets/screens/home.jpg",
+  glass: [661, 228, 1034, 482],                // the monitor's glass, from tools/build_screens.py
+  candles: [[573, 160], [536, 186], [1207, 392], [1302, 288], [1361, 262], [1421, 302], [1403, 484]],
+  title: "MARELE", typeMs: 220, t0: null,
+};
+
+function drawHome(now) {
+  const ctx = $("home").getContext("2d");
+  const bg = image(HOME.bg);
+  if (!ready(bg)) return;
+  if (HOME.t0 === null) HOME.t0 = now;
+  const t = now - HOME.t0;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(bg, 0, 0);
+  // candle light breathes
+  ctx.globalCompositeOperation = "lighter";
+  HOME.candles.forEach(([x, y], i) => {
+    const a = 0.1 + 0.06 * Math.sin(now / 170 + i * 2.1) + 0.04 * Math.sin(now / 53 + i * 5.3);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 46);
+    g.addColorStop(0, `rgba(255, 196, 110, ${a})`);
+    g.addColorStop(1, "rgba(255, 196, 110, 0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 46, y - 46, 92, 92);
+  });
+  ctx.globalCompositeOperation = "source-over";
+  // the monitor types the title, then the cursor blinks
+  const [gx0, gy0, gx1, gy1] = HOME.glass, cx = (gx0 + gx1) / 2, base = gy0 + 130;
+  const shown = Math.min(HOME.title.length, Math.floor(t / HOME.typeMs));
+  const typing = shown < HOME.title.length;
+  ctx.save();
+  ctx.fillStyle = "#c8ffd6"; ctx.shadowColor = "#40c470"; ctx.shadowBlur = 18;
+  ctx.font = '700 76px "Pixelify Sans"';
+  const x0 = cx - ctx.measureText(HOME.title).width / 2;
+  const text = HOME.title.slice(0, shown);
+  ctx.fillText(text, x0, base);
+  if (typing || Math.floor(t / 530) % 2 === 0) ctx.fillRect(x0 + ctx.measureText(text).width + 6, base - 56, 26, 58);
+  if (!typing) {
+    ctx.font = '400 22px "Pixelify Sans"'; ctx.textAlign = "center"; ctx.shadowBlur = 8;
+    ctx.fillText("A ghost who can only speak", cx, base + 54);
+    ctx.fillText("through the family computer.", cx, base + 82);
+  }
+  ctx.shadowBlur = 0; ctx.fillStyle = "rgba(0, 0, 0, .14)";
+  for (let y = gy0; y < gy1; y += 4) ctx.fillRect(gx0, y, gx1 - gx0, 2);
+  ctx.restore();
+}
+
 function frame(now) {
+  if (!$("intro").hidden) drawHome(now);
   for (const id of S.order) updateWalk(S.rt[id], now);
   if (S.active) {
     const view = $("view").getContext("2d");
@@ -182,8 +237,7 @@ function fitScale() {
   const room = window.innerWidth - (window.innerWidth > 1000 ? 440 : 40);
   S.scale = room >= 1280 ? 2 : 1;
   const v = $("view");
-  v.style.width = VIEW_W * S.scale + "px";
-  v.style.height = VIEW_H * S.scale + "px";
+  v.style.width = VIEW_W * S.scale + "px";  // CSS caps it at the column's width on phones
 }
 
 // ------------------------------------------------------------------ Marycel's turns
@@ -237,7 +291,7 @@ async function perform(id, res) {
   rt.anim = after.marycel.seated === "yes" ? "sit_type" : "idle";
   if (rt.anim === "sit_type") rt.x = after.marycel.x;
   rt.t0 = performance.now();
-  if (after.world.transfer_consent === "asked" && !rt.askedAt) rt.askedAt = performance.now();
+  if (after.world.transfer_consent === "asked" && !rt.askedAt) { rt.askedAt = performance.now(); rt.answer = null; }
   if (after.world.transfer_consent !== "asked") rt.askedAt = null;
 }
 
@@ -297,10 +351,24 @@ async function stepRoom(id, gen) {
     return false;
   }
   if (gen !== S.generation) return true;
-  if (res.ended) { S.rooms[id].ended = true; checkOver(); return true; }
+  if (res.ended) { S.rooms[id].ended = true; roomEnded(id); return true; }
   await perform(id, res);
-  if (res.room.ended) checkOver();
+  if (res.room.ended) roomEnded(id);
   return true;
+}
+
+function roomEnded(id) {
+  if (!S.order.every((x) => S.rooms[x].ended)) {
+    notice(`${S.rooms[id].label}: her night is over. The other rooms go on.`);
+  }
+  checkOver();
+}
+
+function notice(text) {
+  const el = $("notice");
+  el.textContent = text;
+  clearTimeout(S.noticeTimer);
+  S.noticeTimer = setTimeout(() => { el.textContent = ""; }, 8000);
 }
 
 function checkOver() {
@@ -344,7 +412,8 @@ function flagPreview(id, res) {
 function updatePreviews() {
   for (const b of document.querySelectorAll(".preview")) {
     const id = b.dataset.room, room = S.rooms[id];
-    b.hidden = id === S.active;
+    b.classList.toggle("active", id === S.active);
+    b.setAttribute("aria-pressed", String(id === S.active));
     b.classList.toggle("alert", !!(room.question || S.rt[id].alert));
     b.querySelector(".cap b").textContent = room.label;
     b.querySelector(".cap span").textContent = room.ended ? "night over" : room.question ? "asking you" :
@@ -388,8 +457,9 @@ function hitTest(id, x, y) {
 function onHover(e) {
   if (!S.active) return;
   const rect = $("view").getBoundingClientRect();
-  const x = (e.clientX - rect.left) / S.scale + camFor(S.active);
-  const y = (e.clientY - rect.top) / S.scale;
+  const k = rect.width / VIEW_W;
+  const x = (e.clientX - rect.left) / k + camFor(S.active);
+  const y = (e.clientY - rect.top) / k;
   S.hover = hitTest(S.active, x, y);
   const tip = $("tip");
   if (!S.hover) { tip.hidden = true; return; }
@@ -493,16 +563,28 @@ const STATUS_WORDS = {
 };
 
 async function sendSignal(s, input) {
+  if (S.sending) return;
   const params = {};
   if (input) {
     const v = input.value.trim();
-    if (s.params.includes("text") && !v) { input.focus(); return; }
+    if (s.params.includes("text") && !v) {
+      if (input.focus) input.focus();
+      $("feedback").textContent = "Type a few letters first.";
+      return;
+    }
     params[input.name] = v;
   }
+  S.sending = true;
+  document.querySelectorAll(".sig button, .banner button").forEach((b) => { b.disabled = true; });
   try {
     const res = await api("/api/signal", { signal: s.id, params });
+    if (s.id === "transfer_response") {
+      for (const id of S.order) {
+        if (S.rooms[id].question) S.rt[id].answer = { text: CHOICE_WORDS[params.choice], until: performance.now() + 8000 };
+        S.rt[id].askedAt = null;
+      }
+    }
     setRooms(res.rooms);
-    if (s.id === "transfer_response") for (const id of S.order) S.rt[id].askedAt = null;
     if (input && input.tagName === "INPUT") input.value = "";
     const fb = $("feedback");
     fb.innerHTML = "";
@@ -517,9 +599,12 @@ async function sendSignal(s, input) {
     if (s.id === "tone" || s.id === "play_fragment") sfx("tone");
     else if (s.id === "print_message") sfx("printer");
     else if (s.id !== "stay_silent") sfx("screen");
-    renderPanel();
   } catch (e) {
     setStatus(e.message, true);
+  } finally {
+    S.sending = false;
+    $("banner").dataset.key = "";
+    renderPanel();
   }
 }
 
@@ -534,11 +619,7 @@ function renderPanel() {
   const held = m.holding ? `holding the ${m.holding.replace(/_/g, " ")}` : "hands free";
   const where = m.location === "away" ? "out of the room" : `${m.seated === "yes" ? "sitting at" : "at"} the ${m.at.replace(/_/g, " ")}`;
   $("room-facts").textContent = `Marycel is ${where}, ${held}. On the screen: ${room.screen ? `"${room.screen}"` : "no message"}.`;
-  const banner = $("banner");
-  if (room.question && !room.ended) {
-    banner.hidden = false;
-    banner.textContent = `Marycel asks you: "${room.question}"  Answer with Recovery > Agree, decline or warn.`;
-  } else banner.hidden = true;
+  renderAsk(room, S.rt[id]);
 
   $("log-room").textContent = `(${room.label})`;
   const log = $("log");
@@ -568,6 +649,40 @@ function renderPanel() {
   }
   updatePreviews();
   updateSignalLocks();
+}
+
+// Marycel's transfer question, with the answers right under it; after an
+// answer, the banner says so for a few seconds.
+function renderAsk(room, rt) {
+  const banner = $("banner");
+  const answered = rt.answer && performance.now() < rt.answer.until ? rt.answer.text : "";
+  const asking = room.question && !room.ended;
+  banner.hidden = !asking && !answered;
+  if (banner.hidden) { banner.dataset.key = ""; return; }
+  const key = `${asking ? room.question : ""}|${answered}`;
+  if (banner.dataset.key === key) return;
+  banner.dataset.key = key;
+  banner.innerHTML = `<span class="q"></span><span class="answers"></span>`;
+  const box = banner.querySelector(".answers");
+  if (answered) {
+    banner.querySelector(".q").textContent = `You answered: ${answered}.`;
+    box.textContent = "She will see it on her next step.";
+    setTimeout(() => { if (S.active) renderPanel(); }, rt.answer.until - performance.now() + 50);
+    return;
+  }
+  banner.querySelector(".q").textContent = `Marycel asks you: "${room.question}"`;
+  const s = S.signals.find((x) => x.id === "transfer_response");
+  for (const c of s.choices) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = CHOICE_WORDS[c] || c;
+    b.disabled = S.sending;
+    b.addEventListener("click", async () => {
+      await sendSignal(s, { name: "choice", value: c });
+      if (!banner.hidden) banner.focus();
+    });
+    box.append(b);
+  }
 }
 
 function setStatus(text, bad) {
@@ -696,17 +811,20 @@ function updateMusic() {
 // ------------------------------------------------------------------ ending
 
 const ENDINGS = {
-  bridge: ["The bridge", "Marycel moved Elena's own stream to the new drive, with her yes."],
-  wrong_voice: ["The wrong voice", "The stream she moved was not Elena's. Something else left the machine."],
-  promise: ["The promise", "Elena said no. The passage is held, and the contact is kept."],
-  recording_survives: ["The recording survives", "The family video is safe. Elena was never recognized."],
-  unresolved: ["Unresolved", "The night ended without a transfer or a safe copy."],
+  bridge: ["The bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes."],
+  wrong_voice: ["The wrong voice", "The voice she moved was not Elena's. Something else got out of the machine."],
+  promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut, and they can still talk."],
+  recording_survives: ["The recording survives", "The family video is safe, but Marycel never knew Elena was there."],
+  unresolved: ["Unresolved", "The night ended before any voice was moved or the video was saved."],
 };
 const FACT_WORDS = {
-  video: { none: "video not copied", copying: "video copy unfinished", preserved: "family video copied", failed: "video copy failed" },
-  passage: { dormant: "passage untouched", stirring: "passage stirring", active: "passage active", contained: "passage contained",
-             transfer: "a stream crossed over", uncertain: "passage uncertain" },
+  video: { none: "family video not copied", copying: "family video copy unfinished", preserved: "family video copied",
+           failed: "family video copy failed" },
+  passage: { dormant: "the way out stayed closed", stirring: "the way out was stirring", active: "the way out was open",
+             contained: "the way out was shut again", transfer: "a voice crossed over", uncertain: "unclear if the way out is shut" },
 };
+const CONSENT_WORDS = { none: "she never asked you", asked: "she asked, and you didn't answer",
+                        no_answer: "she asked, and time ran out before you answered" };
 
 async function showEnding() {
   if (S.over) return;
@@ -714,6 +832,9 @@ async function showEnding() {
   setStatus();
   let rooms = S.order.map((id) => S.rooms[id]);
   try { rooms = (await api("/api/end", {})).rooms; } catch (_) { /* show what we have */ }
+  setRooms(rooms);
+  $("pause").disabled = true;
+  $("end").disabled = true;
   const box = $("outcomes");
   box.innerHTML = "";
   for (const r of rooms) {
@@ -722,14 +843,23 @@ async function showEnding() {
     const [name, text] = ENDINGS[o.key];
     const div = document.createElement("div");
     div.className = "outcome";
-    const streamWord = o.stream === "none" ? "no stream chosen" :
-      `chose ${o.stream.replace("_", " ")} (Elena's was ${String(o.elena_stream || "?").replace("_", " ")})`;
-    div.innerHTML = `<h3></h3><div class="name"></div><p></p><ul></ul>`;
+    const voice = (v) => `voice ${String(v || "?").replace("stream_", "").toUpperCase()}`;
+    const streamWord = o.stream === "none" ? "no voice chosen" : `she chose ${voice(o.stream)}; Elena's was ${voice(o.elena_stream)}`;
+    div.innerHTML = `<h3></h3><div class="name"></div><p></p><details><summary>What happened</summary><ul></ul></details>`;
+    // the card shows where this room actually ended up
+    const snap = document.createElement("canvas");
+    snap.width = VIEW_W; snap.height = VIEW_H;
+    snap.setAttribute("role", "img");
+    snap.setAttribute("aria-label", `${r.label} in the morning`);
+    const sctx = snap.getContext("2d");
+    sctx.imageSmoothingEnabled = false;
+    drawRoom(sctx, r.id, camFor(r.id), performance.now(), null);
+    div.prepend(snap);
     div.querySelector("h3").textContent = r.label;
     div.querySelector(".name").textContent = name;
     div.querySelector("p").textContent = text;
     for (const f of [FACT_WORDS.video[o.video], FACT_WORDS.passage[o.passage], streamWord,
-                     `your answer: ${CHOICE_WORDS[o.consent] || o.consent.replace(/_/g, " ")}`, `${o.steps} steps`]) {
+                     CHOICE_WORDS[o.consent] ? `your answer: ${CHOICE_WORDS[o.consent]}` : CONSENT_WORDS[o.consent] || o.consent.replace(/_/g, " "), `${o.steps} steps`]) {
       const li = document.createElement("li");
       li.textContent = f;
       div.querySelector("ul").append(li);
@@ -767,13 +897,30 @@ async function init() {
     setStatus();
   });
   $("end").addEventListener("click", showEnding);
+  window.addEventListener("beforeunload", (e) => {
+    if (S.started && !S.over) { e.preventDefault(); e.returnValue = ""; }
+  });
   $("again").addEventListener("click", async () => {
     $("ending").hidden = true;
-    try { await newGame(); } catch (e) { setStatus(e.message, true); return; }
+    try { await newGame(); } catch (e) {
+      setStatus(e.message, true);
+      S.over = true;
+      $("ending").hidden = false;
+      return;
+    }
     S.started = true;
+    $("pause").textContent = "Pause";
+    $("pause").disabled = false;
+    $("end").disabled = false;
     setStatus();
     updateSignalLocks();
     updateMusic();
+  });
+  $("how").addEventListener("click", () => {
+    const open = $("how-text").hidden;
+    $("how-text").hidden = !open;
+    $("how").setAttribute("aria-expanded", String(open));
+    $("how").textContent = open ? "Close" : "How to play";
   });
   $("start").addEventListener("click", () => {
     $("intro").hidden = true;
@@ -794,17 +941,19 @@ async function init() {
     Music.mute(soundOn);
     if (!soundOn) Voice.say([]);
   });
+  requestAnimationFrame(frame);
+  document.fonts.load('700 76px "Pixelify Sans"').catch(() => {});
   try {
     await Music.load();
     await Voice.load();
     await loadSprites();
     await newGame();
+    $("start").textContent = "Begin the night";
     $("start").disabled = false;
     $("start").focus();
   } catch (e) {
     $("intro-error").textContent = e.message;
   }
-  requestAnimationFrame(frame);
 }
 
 init();
