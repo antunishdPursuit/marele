@@ -25,7 +25,9 @@ import secrets
 import sys
 import threading
 import time
+import posixpath
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -440,7 +442,9 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/state":
             game = NIGHTS.get(self._sid())
             return self._json(game.state()) if game else self._json({"error": "No night started."}, 404)
-        if not self.path.startswith(("/game/web/", "/assets/")):
+        # decode and normalise first, so "/assets/..%2f.env" can't step outside the two folders
+        clean = posixpath.normpath(urllib.parse.unquote(urllib.parse.urlsplit(self.path).path))
+        if not clean.startswith(("/game/web/", "/assets/")):
             return self.send_error(404)
         return super().do_GET()
 

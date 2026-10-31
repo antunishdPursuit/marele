@@ -1921,7 +1921,7 @@
    ],
    "anim": "sit_type",
    "ms": 12000,
-   "notes": "Needs Elena to have been asked and to have answered or had no answer. Marycel may still go ahead after 'declined'; the ending weighs it. Completion records which stream moved, not who Marycel believes it is.",
+   "notes": "Needs Elena's yes (transfer_consent agreed). Completion records which stream moved, not who Marycel believes it is.",
    "params": {
     "target": "object id"
    },
@@ -3347,7 +3347,7 @@
      "open_video_file"
     ]
    },
-   "text": "After Marycel first opens the file list, notes, log, map or video (story stage 1). Default; Dennis to confirm."
+   "text": "After Marycel first opens the file list, notes, log, map or video (story stage 1)."
   },
   "fragments": {
    "rule": {
@@ -3357,7 +3357,7 @@
      "preserved"
     ]
    },
-   "text": "After Marycel has played the recording, tape or file (story stage 2). Default; Dennis to confirm."
+   "text": "After Marycel has played the recording, tape or file (story stage 2)."
   },
   "text_channel": {
    "rule": {
@@ -3365,7 +3365,7 @@
      "run_diagnostics"
     ]
    },
-   "text": "After Marycel runs diagnostics with the computer on (story stage 2). Default; Dennis to confirm."
+   "text": "After Marycel runs diagnostics with the computer on (story stage 2)."
   },
   "print_route": {
    "rule": {
@@ -3509,7 +3509,7 @@
   "A sound is heard only when it happens: through plugged headphones she is wearing, or through working speakers while she is in the room. Screen text stays until she uses the computer for something else or it powers off; a printout keeps its text."
  ],
  "echo": {
-  "notes": "The Echo is not controlled by the model or the player. The game produces its outputs from these rules and logs each one with its true source, which only the author view shows. Default rules; Dennis to confirm.",
+  "notes": "The Echo is not controlled by the model or the player. The game produces its outputs from these rules and logs each one with its true source, which only the author view shows.",
   "events": [
    {
     "id": "echo_repeat_phrase",

@@ -1,7 +1,7 @@
 """Voice samples for Marycel, to choose her voice by ear. Each engine runs in its
 own environment under Tools/Voice in Home Codex (their dependencies clash).
 Both pass the licence rule: Kokoro (Apache-2.0), Qwen3-TTS (Apache-2.0).
-Designed voices are used directly, never cloned (Dennis's rule).
+Designed voices are used directly, never cloned (a project rule).
 
     <Tools/Voice/kokoro>/.venv/Scripts/python tools/voice_samples.py kokoro
     <Tools/Voice/qwen3tts>/.venv/Scripts/python tools/voice_samples.py design

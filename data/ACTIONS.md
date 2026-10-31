@@ -105,7 +105,7 @@ Generated from `data/catalog.json` by `tools/action_reference.py`; edit the cata
 | `compare_streams` | Compare the two streams | power is on; app is map | — | sit_type | learns: stream history |
 | `select_stream` | Select a stream | power is on; app is map | story selected_stream → $choice; story transfer_consent → none | sit_type | params: choice choice: stream_a, stream_b |
 | `ask_before_transfer` | Ask Elena before transferring | power is on; story selected_stream is stream_a or stream_b | story transfer_consent → asked | sit_type | params: text she chooses the words Opens Elena's chance to answer. If she sends nothing by the end of the next reaction round the game sets no_answer. |
-| `start_transfer` | Transfer the selected stream | power is on; device is connected; story passage is contained; story selected_stream is stream_a or stream_b; story transfer_consent is agreed | story transfer → running; story passage → transfer; when finished: story transfer → completed; if interrupted by shut_down, restart: story transfer → failed; story passage → uncertain | sit_type | Needs Elena to have been asked and to have answered or had no answer. Marycel may still go ahead after 'declined'; the ending weighs it. Completion records which stream moved, not who Marycel believes it is. |
+| `start_transfer` | Transfer the selected stream | power is on; device is connected; story passage is contained; story selected_stream is stream_a or stream_b; story transfer_consent is agreed | story transfer → running; story passage → transfer; when finished: story transfer → completed; if interrupted by shut_down, restart: story transfer → failed; story passage → uncertain | sit_type | Needs Elena's yes (transfer_consent agreed). Completion records which stream moved, not who Marycel believes it is. |
 | `stop_transfer` | Stop the transfer | power is on; story transfer is running | story transfer → stopped; story passage → contained | sit_type |  |
 | `enable_printing` | Turn on printing from the computer | power is on; printer power is on; printer cable is connected | print_route → on | sit_type | Unlocks Elena's print_message signal. |
 | `print_file` | Print the open file | power is on; print_route is on; app is notes or log or map; printer paper is loaded; printer output is none; printer jam is no; printer power is on; printer cable is connected | printer output → printed | sit_type |  |
@@ -184,9 +184,9 @@ Game-driven state changes that no actor chooses.
 ## Unlocks
 
 - **start**: {'rule': 'always', 'text': 'Available from the first moment.'}
-- **file_route**: {'rule': {'after_any': ['open_files', 'open_notes', 'open_log', 'open_map', 'open_video_file']}, 'text': 'After Marycel first opens the file list, notes, log, map or video (story stage 1). Default; Dennis to confirm.'}
-- **fragments**: {'rule': {'world': 'recording_status', 'is': ['seen', 'preserved']}, 'text': 'After Marycel has played the recording, tape or file (story stage 2). Default; Dennis to confirm.'}
-- **text_channel**: {'rule': {'after_any': ['run_diagnostics']}, 'text': 'After Marycel runs diagnostics with the computer on (story stage 2). Default; Dennis to confirm.'}
+- **file_route**: {'rule': {'after_any': ['open_files', 'open_notes', 'open_log', 'open_map', 'open_video_file']}, 'text': 'After Marycel first opens the file list, notes, log, map or video (story stage 1).'}
+- **fragments**: {'rule': {'world': 'recording_status', 'is': ['seen', 'preserved']}, 'text': 'After Marycel has played the recording, tape or file (story stage 2).'}
+- **text_channel**: {'rule': {'after_any': ['run_diagnostics']}, 'text': 'After Marycel runs diagnostics with the computer on (story stage 2).'}
 - **print_route**: {'rule': {'device': 'computer', 'state': 'print_route', 'is': 'on'}, 'text': 'After Marycel turns on printing from the computer, with the printer on and connected (story stage 3).'}
 
 ## Story state
