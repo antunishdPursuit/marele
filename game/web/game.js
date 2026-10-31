@@ -379,13 +379,18 @@ function waitingForElena(id) {
 async function stepRoom(id, gen) {
   let res;
   try {
-    res = await api("/api/step", { room: id });
+    // her answer clock ran out: the server records no answer before her next step
+    const rt = S.rt[id], expired = S.rooms[id].world.transfer_consent === "asked" &&
+      !!rt.askedAt && performance.now() - rt.askedAt >= CONSENT_WAIT_MS;
+    res = await api("/api/step", { room: id, consent_expired: expired });
     setStatus("");
   } catch (e) {
     setStatus(e.message, true);
     return false;
   }
-  if (gen !== S.generation) return true;
+  // a step that lands while paused waits for play; after End it is not shown
+  while (S.paused && !S.over && gen === S.generation) await sleep(200);
+  if (gen !== S.generation || S.over) return true;
   if (res.ended) { S.rooms[id].ended = true; roomEnded(id); return true; }
   await perform(id, res);
   if (res.room.ended) roomEnded(id);
@@ -528,7 +533,7 @@ const CHOICE_WORDS = { agreed: "Yes", declined: "No", warned: "Danger", more_tes
 const UNLOCK_WORDS = {
   long_note: "screen repaired, longer messages work now.",
   highlight_file: "she opened the files, you can point to one.",
-  play_fragment: "she played the recording, you can play pieces of it.",
+  play_fragment: "the recording is ready, you can play pieces of it.",
   print_message: "the printer works, you can print a note.",
   request_pause: "the recovery is running, you can ask her to halt it.",
 };
@@ -588,8 +593,8 @@ function buildSignals() {
     </form>
     <div class="sig-card" data-card="sound">
       <div class="card-head">${icon("sound")}<h3>Sound</h3></div>
-      <p class="card-line">She hears it if she's in the room.</p>
-      <div class="sig-row" data-show="tone"><button type="button" data-send="tone">Crackle the speakers</button></div>
+      <p class="card-line">She hears it through the speakers, or the headphones if she's wearing them.</p>
+      <div class="sig-row" data-show="tone"><button type="button" data-send="tone">Play a tone</button></div>
       <div class="sig-row" data-show="play_fragment">
         <select id="fragment-choice" aria-label="Piece of the recording"></select>
         <button type="button" data-send="play_fragment">Play this piece</button>
@@ -733,8 +738,9 @@ async function sendSignal(s, input) {
     const res = await api("/api/signal", { signal: s.id, params });
     if (s.id === "transfer_response") {
       for (const id of S.order) {
-        if (S.rooms[id].question) S.rt[id].answer = { text: CHOICE_WORDS[params.choice], until: performance.now() + 8000 };
-        S.rt[id].askedAt = null;
+        const took = ["noticed", "sent"].includes(res.results[id].status);  // a late answer is refused
+        if (S.rooms[id].question && took) S.rt[id].answer = { text: CHOICE_WORDS[params.choice], until: performance.now() + 8000 };
+        if (took) S.rt[id].askedAt = null;
       }
     }
     setRooms(res.rooms);
@@ -817,7 +823,13 @@ function renderPanel() {
 function renderAsk(room, rt) {
   const banner = $("banner");
   const answered = rt.answer && performance.now() < rt.answer.until ? rt.answer.text : "";
-  const asking = room.question && !room.ended;
+  // the question closes when her 45 seconds are up (the clock stands still while paused)
+  const left = rt.askedAt ? CONSENT_WAIT_MS - ((S.paused ? S.pausedAt : performance.now()) - rt.askedAt) : 1;
+  const asking = room.question && !room.ended && left > 0;
+  if (asking && rt.askedAt && !S.paused) {
+    clearTimeout(S.askTimer);
+    S.askTimer = setTimeout(() => { if (S.active) renderPanel(); }, left + 50);
+  }
   banner.hidden = !asking && !answered;
   if (banner.hidden) { banner.dataset.key = ""; return; }
   const key = `${asking ? room.question : ""}|${answered}|${S.paused}`;
@@ -827,7 +839,7 @@ function renderAsk(room, rt) {
   const box = banner.querySelector(".answers");
   if (answered) {
     banner.querySelector(".q").textContent = `You answered: ${answered}.`;
-    box.textContent = "She will see it on her next step.";
+    box.textContent = "She reads it when she looks at the screen.";
     setTimeout(() => { if (S.active) renderPanel(); }, rt.answer.until - performance.now() + 50);
     return;
   }
@@ -1063,6 +1075,12 @@ async function init() {
     m.style.left = `${Math.max(8, Math.min(g.right - m.offsetWidth, innerWidth - m.offsetWidth - 8))}px`;
   });
   $("end").addEventListener("click", () => { $("menu").hidePopover(); showEnding(); });
+  // a hidden tab doesn't keep a night (and its model calls) running
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden || !S.started || S.over || S.paused) return;
+    setPaused(true);
+    notice("Paused while the tab was hidden. Press play to go on.");
+  });
   window.addEventListener("beforeunload", (e) => {
     if (S.started && !S.over) { e.preventDefault(); e.returnValue = ""; }
   });
