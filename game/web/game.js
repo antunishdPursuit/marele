@@ -8,6 +8,9 @@ const WALK_SPEED = 80;           // room pixels per second
 const CONSENT_WAIT_MS = 45000;   // a room waits this long for Elena's answer after Marycel asks
 const ROUND_GAP_MS = 900;         // a breath between rounds, so Elena can watch and act
 const VOICE_WAIT_MS = 8000;       // the next round waits for her line to finish, up to this long
+const CHAIR_OUT_DX = 9;           // pulled out, the chair's left edge sits this far right of her seated feet
+const CHAIR_BACK_X = 29;          // the backrest's centre inside the chair sprite
+const PULL_REACH = 26;            // how far in front of her feet her hands are in the pull pose
 const OUTFIT = "star-sweater";
 
 const $ = (id) => document.getElementById(id);
@@ -26,7 +29,7 @@ async function api(path, body) {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || res.statusText);
+  if (!res.ok || data.error) throw Object.assign(new Error(data.error || res.statusText), { status: res.status });
   return data;
 }
 
@@ -62,8 +65,11 @@ function setRooms(rooms) {
       S.order.push(r.id);
       S.rt[r.id] = { x: r.marycel.x, facing: r.marycel.facing, anim: "idle", t0: performance.now(),
                      visible: r.marycel.location !== "away", walk: null, askedAt: null, alert: false,
+                     sitting: r.marycel.seated === "yes", chair: r.marycel.seated === "yes" ? 1 : 0,
                      seen: new Set(), unread: 0, typed: null };
       image(`/assets/pixel/rooms/${r.id}.png`);
+      const chair = r.objects.find((o) => o.id === "chair");
+      if (chair) prop(chair.sprite);  // loaded before her first step, so the first pull-out shows
     }
     checkUnlocks(r.id, fresh);
   }
@@ -83,15 +89,16 @@ function resetRooms(state) {
 // ------------------------------------------------------------------ drawing
 
 function animFrame(rt, now) {
-  const a = S.anims[rt.anim] || S.anims.idle;
+  const want = rt.anim === "push_chair" ? "pull_chair" : rt.anim;  // pushing uses the pulling frames
+  const name = want in S.anims ? want : "idle", a = S.anims[name];
   let t = now - rt.t0;
   const total = a.durations_ms.reduce((x, y) => x + y, 0);
   if (a.loop) t %= total; else t = Math.min(t, total - 1);
   for (let i = 0; i < a.frame_count; i++) {
-    if (t < a.durations_ms[i]) return [rt.anim in S.anims ? rt.anim : "idle", i];
+    if (t < a.durations_ms[i]) return [name, i];
     t -= a.durations_ms[i];
   }
-  return [rt.anim, a.frame_count - 1];
+  return [name, a.frame_count - 1];
 }
 
 function drawMarycel(ctx, rt, now) {
@@ -121,7 +128,7 @@ function drawRoom(ctx, id, camX, now, hover) {
   const bg = image(`/assets/pixel/rooms/${id}.png`);
   if (ready(bg)) ctx.drawImage(bg, 0, 0);
   for (const o of room.objects) {
-    if (!o.sprite) continue;
+    if (!o.sprite || o.id === "chair") continue;
     const img = prop(o.sprite);
     if (!ready(img)) continue;
     const [x0, y0] = o.bounds;
@@ -150,7 +157,63 @@ function drawRoom(ctx, id, camX, now, hover) {
     ctx.lineWidth = 1;
     ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0, y1 - y0);
   }
+  drawChair(ctx, room, rt, now);
   drawMarycel(ctx, rt, now);
+}
+
+// The chair is tucked under the desk (on the desk's plane, a little further back) until she
+// sits. She stands behind it, takes the backrest and pulls it out, stepping back with it; walks
+// round in front of it; and lowers herself onto it. Standing up runs the other way. It is drawn
+// behind her, so its backrest shows behind her back while she sits.
+const eased = (k) => k * k * (3 - 2 * k);
+
+function chairGeom(room) {
+  const chair = room.objects.find((o) => o.id === "chair"), pc = room.objects.find((o) => o.id === "computer");
+  const img = chair && prop(chair.sprite);
+  if (!img || !ready(img) || !pc) return null;
+  const out = pc.sit_x + CHAIR_OUT_DX;
+  return { img, tx: chair.bounds[0], ty: chair.bounds[1], ox: out, oy: FOOT_Y - img.height,
+           grip: out + CHAIR_BACK_X + PULL_REACH, shift: out - chair.bounds[0] };
+}
+
+// how far out the chair is: 0 tucked, 1 pulled out; it moves only while her hands are on it
+function chairOut(rt, now) {
+  const a = S.anims && S.anims.pull_chair;  // pushing runs the pulling frames
+  if ((rt.anim === "pull_chair" || rt.anim === "push_chair") && a) {
+    const ev = a.events, at = (i) => a.durations_ms.slice(0, i).reduce((x, y) => x + y, 0);
+    const k = eased(Math.min(Math.max((now - rt.t0 - at(ev.chair_start)) /
+      Math.max(1, at(ev.chair_end) - at(ev.chair_start)), 0), 1));
+    return rt.anim === "pull_chair" ? k : 1 - k;
+  }
+  return rt.chair || 0;
+}
+
+function drawChair(ctx, room, rt, now) {
+  const g = chairGeom(room);
+  if (!g) return;
+  const k = chairOut(rt, now);
+  ctx.drawImage(g.img, Math.round(g.tx + (g.ox - g.tx) * k), Math.round(g.ty + (g.oy - g.ty) * k));
+}
+
+// Walk to the backrest and pull the chair out (out) or push it back in, moving with it.
+async function moveChair(id, out, gen) {
+  const rt = S.rt[id], room = S.rooms[id], g = chairGeom(room), a = S.anims.pull_chair;
+  if (!g || !a || (rt.chair || 0) === (out ? 1 : 0)) { rt.chair = out ? 1 : 0; return true; }
+  await walkTo(id, out ? g.grip - g.shift : g.grip);
+  if (gen !== S.generation) return false;
+  rt.facing = "left";  // every desk faces left; she faces the chair and the desk
+  const x0 = rt.x;
+  rt.anim = out ? "pull_chair" : "push_chair";
+  rt.t0 = performance.now();
+  const total = a.durations_ms.reduce((x, y) => x + y, 0);
+  while (performance.now() - rt.t0 < total) {
+    const k = chairOut(rt, performance.now());
+    rt.x = out ? x0 + g.shift * k : x0 - g.shift * (1 - k);
+    await sleep(16);
+    if (gen !== S.generation) return false;
+  }
+  rt.chair = out ? 1 : 0;
+  return true;
 }
 
 // The camera keeps the computer, where Elena is, in the middle, and pans only as far as it
@@ -272,6 +335,36 @@ function frame(now) {
 
 // ------------------------------------------------------------------ Marycel's turns
 
+// Play a one-off animation to its end; false if the night changed meanwhile.
+async function playOnce(id, anim, gen) {
+  const rt = S.rt[id], a = S.anims[anim];
+  rt.anim = anim;
+  rt.t0 = performance.now();
+  if (a) await sleep(a.durations_ms.reduce((x, y) => x + y, 0));
+  return gen === S.generation;
+}
+
+// Which animation fits a step: what she did, to what, and whether she is sitting. The rules'
+// own "anim" stays as it is (the rules engine seats her for screen work by it).
+const SCREEN_WATCHING = new Set(["read_screen", "play_tape", "play_video_file", "compare_streams", "test_sound",
+                                 "open_damaged_segment"]);
+const STILL = new Set(["wait", "say_aloud", "turn_around", "look_out", "sit_down", "stand_up"]);
+function animFor(room, res) {
+  const st = res.step || {}, act = st.action, base = res.anim, seated = room.marycel.seated === "yes";
+  const kind = st.target === "floor" ? "floor" : ((room.objects.find((o) => o.id === st.target) || {}).kind || "");
+  if (base === "walk") return "idle";
+  if (base === "sit_type" && act !== "sit_down") return SCREEN_WATCHING.has(act) ? "sit_idle" : "sit_type";
+  if (STILL.has(act)) return seated ? "sit_idle" : "idle";
+  if (act === "write_note") return seated ? "sit_idle" : "write";
+  if (act === "read_held" || act === "compare_photo") return seated ? "sit_idle" : "read";
+  if (act === "put_on_headphones" || act === "take_off_headphones") return seated ? "sit_idle" : "headphones";
+  if (act === "visit_ofrenda") return "kneel";
+  if (kind === "storage" || kind === "floor") return seated ? "sit_reach" : "pickup";  // low things: crouch
+  if (act === "test_cable" || act === "examine_with_magnifier") return "inspect";
+  if (act === "inspect") return seated ? "sit_idle" : ["window", "door"].includes(kind) ? "idle" : "inspect";
+  return seated ? "sit_reach" : "reach_desk";  // the rest (candles too) is at desk or table height
+}
+
 function walkTo(id, x) {
   const rt = S.rt[id];
   if (Math.abs(rt.x - x) < 1) return Promise.resolve();
@@ -291,7 +384,14 @@ async function perform(id, res) {
   const rt = S.rt[id], gen = S.generation;
   const before = S.rooms[id];
   const after = res.room;
+  const wasSeated = rt.sitting, nowSeated = after.marycel.seated === "yes";
   if (!res.refused) {
+    if (wasSeated && !nowSeated) {  // rise and push the chair in before going anywhere
+      if (!await playOnce(id, "stand_up", gen)) return;
+      rt.sitting = false;
+      if (!await moveChair(id, false, gen)) return;
+    }
+    if (!wasSeated && nowSeated && !await moveChair(id, true, gen)) return;
     if (before.marycel.location === "away" && after.marycel.location !== "away") {
       rt.x = doorX(before); rt.visible = true;
     }
@@ -302,12 +402,16 @@ async function perform(id, res) {
     if (gen !== S.generation) return;
     if (after.marycel.location === "away") rt.visible = false;
     rt.facing = after.marycel.facing;
+    if (!wasSeated && nowSeated) {  // lower herself onto the chair behind her
+      if (!await playOnce(id, "sit_down", gen)) return;
+      rt.sitting = true;
+    }
   }
   S.rooms[id] = after;
   checkUnlocks(id);
   if (id !== S.active) rt.unread++;
   if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", steps: after.steps };
-  rt.anim = res.refused ? "idle" : res.anim;
+  rt.anim = res.refused ? (rt.sitting ? "sit_idle" : "idle") : animFor(after, res);
   rt.t0 = performance.now();
   showLine(id, res);
   if (id === S.active) {
@@ -323,8 +427,8 @@ async function perform(id, res) {
   const animTotal = a && !a.loop ? a.durations_ms.reduce((x, y) => x + y, 0) : 0;
   await sleep(Math.min(Math.max(res.ms || 600, animTotal, 900), 4000));
   if (gen !== S.generation) return;
-  rt.anim = after.marycel.seated === "yes" ? "sit_type" : "idle";
-  if (rt.anim === "sit_type") rt.x = after.marycel.x;
+  rt.anim = rt.sitting ? "sit_idle" : "idle";
+  if (rt.sitting) rt.x = after.marycel.x;
   rt.t0 = performance.now();
   if (after.world.transfer_consent === "asked" && !rt.askedAt) { rt.askedAt = performance.now(); rt.answer = null; }
   if (after.world.transfer_consent !== "asked") rt.askedAt = null;
@@ -385,6 +489,7 @@ async function stepRoom(id, gen) {
     res = await api("/api/step", { room: id, consent_expired: expired });
     setStatus("");
   } catch (e) {
+    if (e.status === 410) { nightLost(); return true; }
     setStatus(e.message, true);
     return false;
   }
@@ -766,7 +871,8 @@ async function sendSignal(s, input) {
     const reached = S.order.filter((id) => !["unavailable", "ended"].includes(res.results[id].status));
     ok = reached.length ? reached : null;
   } catch (e) {
-    setStatus(e.message, true);
+    if (e.status === 410) nightLost();
+    else setStatus(e.message, true);
   } finally {
     S.sending = false;
     $("banner").dataset.key = "";
@@ -1121,6 +1227,26 @@ async function init() {
     return;
   }
   await prepareNight();
+  $("start").focus();
+}
+
+// The server forgets a night left alone for 30 minutes, or when it restarts: say so and go
+// back to the title screen with a new night ready.
+async function nightLost() {
+  if (S.lost) return;
+  S.lost = true;
+  S.generation++;  // stops this night's rounds
+  S.started = false;
+  for (const d of document.querySelectorAll(".dialog")) if (d.open) d.close();
+  $("ending").hidden = true;
+  $("intro").hidden = false;
+  $("pause").disabled = $("end").disabled = true;
+  Music.stop();
+  HOME.t0 = null;
+  setStatus("");
+  await prepareNight();
+  if (S.ready) $("intro-error").textContent = "Your night ended while it sat idle. A new one is ready.";
+  S.lost = false;
   $("start").focus();
 }
 

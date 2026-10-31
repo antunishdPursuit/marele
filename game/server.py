@@ -377,6 +377,14 @@ class Handler(SimpleHTTPRequestHandler):
         if "/api/" in str(args[0] if args else ""):
             sys.stderr.write("%s\n" % (fmt % args))
 
+    def end_headers(self):
+        # game files are revalidated on every load (a 304 when unchanged), so a page loaded
+        # after a deploy gets the new sprites, manifest and script, not old cached copies
+        if not self.path.startswith("/api/") and "Cache-Control" not in "".join(
+                h.decode("latin-1") for h in getattr(self, "_headers_buffer", [])):
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def handle(self):
         try:
             super().handle()
