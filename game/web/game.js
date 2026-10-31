@@ -142,7 +142,7 @@ function drawRoom(ctx, id, camX, now, hover) {
       if (ready(ol)) ctx.drawImage(ol, x0 - 1, y0 - 1);
     }
   }
-  for (const it of room.items) {
+  for (const it of beforeGrab(rt, now) ? rt.carry.items : room.items) {
     if (!it.pos) continue;
     const img = prop(it.sprite);
     if (ready(img)) ctx.drawImage(img, it.pos[0], it.pos[1]);
@@ -159,6 +159,41 @@ function drawRoom(ctx, id, camX, now, hover) {
   }
   drawChair(ctx, room, rt, now);
   drawMarycel(ctx, rt, now);
+  drawCarried(ctx, room, rt, now);
+}
+
+// What she holds is drawn at her hand in each frame (the manifest's "hand" points); during a
+// pick-up or put-down it changes hands at the animation's "grab" frame. Worn headphones sit on
+// her head ("head" points).
+function drawCarried(ctx, room, rt, now) {
+  if (!rt.visible || !S.anims) return;
+  const [name, i] = animFrame(rt, now), a = S.anims[name], [ox, oy] = S.origin;
+  const place = (pt, sprite, nudge = 0) => {
+    const img = sprite && prop(sprite);
+    if (!pt || !img || !ready(img)) return;
+    const y = FOOT_Y - oy + pt[1] - Math.round(img.height / 2);
+    ctx.save();
+    if (rt.facing === "left") {
+      ctx.translate(Math.round(rt.x) + ox - pt[0] - nudge, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, -Math.round(img.width / 2), 0);
+    } else {
+      ctx.drawImage(img, Math.round(rt.x) - ox + pt[0] + nudge - Math.round(img.width / 2), y);
+    }
+    ctx.restore();
+  };
+  const early = beforeGrab(rt, now);
+  const held = early ? rt.carry.from : room.marycel.holding_sprite;
+  if (held) place(a.hand && a.hand[i], held);
+  for (const worn of (early ? rt.carry.wearing : room.marycel.wearing) || []) place(a.head && a.head[i], worn, -2);
+}
+
+// Until her hand gets there (the animation's "grab" frame), the room still looks as it did
+// before the step: the item on the table, in her hand, or on her head.
+function beforeGrab(rt, now) {
+  if (!rt.carry || rt.carry.anim !== rt.anim) return false;
+  const [name, i] = animFrame(rt, now), a = S.anims[name];
+  return !!(a.events && a.events.grab != null && i < a.events.grab);
 }
 
 // The chair is tucked under the desk (on the desk's plane, a little further back) until she
@@ -348,13 +383,19 @@ async function playOnce(id, anim, gen) {
 // own "anim" stays as it is (the rules engine seats her for screen work by it).
 const SCREEN_WATCHING = new Set(["read_screen", "play_tape", "play_video_file", "compare_streams", "test_sound",
                                  "open_damaged_segment"]);
-const STILL = new Set(["wait", "say_aloud", "turn_around", "look_out", "sit_down", "stand_up"]);
+const STILL = new Set(["wait", "say_aloud", "turn_around", "sit_down", "stand_up"]);
+
+// between steps: sitting still, holding what she carries at her chest, or standing
+function restPose(rt, room) {
+  return rt.sitting ? "sit_idle" : room.marycel.holding ? "hold" : "idle";
+}
 function animFor(room, res) {
   const st = res.step || {}, act = st.action, base = res.anim, seated = room.marycel.seated === "yes";
   const kind = st.target === "floor" ? "floor" : ((room.objects.find((o) => o.id === st.target) || {}).kind || "");
-  if (base === "walk") return "idle";
+  if (base === "walk") return room.marycel.holding ? "hold" : "idle";
   if (base === "sit_type" && act !== "sit_down") return SCREEN_WATCHING.has(act) ? "sit_idle" : "sit_type";
-  if (STILL.has(act)) return seated ? "sit_idle" : "idle";
+  if (STILL.has(act)) return seated ? "sit_idle" : room.marycel.holding ? "hold" : "idle";
+  if (act === "look_out") return "look_out";
   if (act === "write_note") return seated ? "sit_idle" : "write";
   if (act === "read_held" || act === "compare_photo") return seated ? "sit_idle" : "read";
   if (act === "put_on_headphones" || act === "take_off_headphones") return seated ? "sit_idle" : "headphones";
@@ -411,7 +452,8 @@ async function perform(id, res) {
   checkUnlocks(id);
   if (id !== S.active) rt.unread++;
   if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", steps: after.steps };
-  rt.anim = res.refused ? (rt.sitting ? "sit_idle" : "idle") : animFor(after, res);
+  rt.anim = res.refused ? restPose(rt, after) : animFor(after, res);
+  rt.carry = { anim: rt.anim, from: before.marycel.holding_sprite, items: before.items, wearing: before.marycel.wearing };
   rt.t0 = performance.now();
   showLine(id, res);
   if (id === S.active) {
@@ -427,7 +469,7 @@ async function perform(id, res) {
   const animTotal = a && !a.loop ? a.durations_ms.reduce((x, y) => x + y, 0) : 0;
   await sleep(Math.min(Math.max(res.ms || 600, animTotal, 900), 4000));
   if (gen !== S.generation) return;
-  rt.anim = rt.sitting ? "sit_idle" : "idle";
+  rt.anim = restPose(rt, after);
   if (rt.sitting) rt.x = after.marycel.x;
   rt.t0 = performance.now();
   if (after.world.transfer_consent === "asked" && !rt.askedAt) { rt.askedAt = performance.now(); rt.answer = null; }
