@@ -74,6 +74,7 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 .subtitle .who { color: var(--phosphor); }
 .subtitle .refused { color: var(--bad); }
 .notice { min-height: 1.3em; margin: 0 0 6px; color: var(--warn); }
+.notice span { display: block; }
 
 .previews { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 100%; }
 .preview { background: none; border: 2px solid var(--line); padding: 0; text-align: left; min-width: 0; display: flex; flex-direction: column; }
@@ -81,18 +82,35 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 .preview.active { border-color: var(--highlight); }
 .preview canvas { width: 100%; height: auto; aspect-ratio: 640 / 224; }
 .preview .cap { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; padding: 2px 6px; color: var(--dim); }
+.cap-foot { display: flex; flex-direction: column; font-size: 14px; }
+.cap .st:empty { display: none; }
+.cap .st.urgent { color: var(--bg); background: var(--warn); align-self: flex-start; padding: 0 6px; }
+.cap .st.unread { color: var(--highlight); }
 .preview .cap b { color: var(--ink); font-weight: normal; }
 .preview.alert { border-color: var(--warn); }
 
 .panel { background: var(--panel); border: 2px solid var(--line); padding: 4px 12px 12px; max-height: calc(100vh - 80px); overflow: auto; }
 .hint { color: var(--dim); margin: 0 0 8px; }
 #signals.resting { opacity: .5; }
-.group { border-top: 2px solid var(--line); padding: 6px 0; }
-.group h3 { font-weight: 600; font-size: 14px; color: var(--dim); margin: 0 0 4px; text-transform: uppercase; letter-spacing: 1px; }
-.sig { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
-.sig input { flex: 1; }
-.sig .label { flex-basis: 100%; }
-.sig .lock { color: var(--dim); font-size: 14px; flex-basis: 100%; }
+/* Signal cards: quiet borders, colour only in the title and icon; a card lights up when it changes. */
+#signals [hidden] { display: none !important; }
+.sig-card { --c: var(--ink); border: 2px solid color-mix(in srgb, var(--c) 35%, var(--line)); background: #1a1720; padding: 8px 10px; margin: 8px 0; transition: border-color .3s; }
+.sig-card[data-card="screen"] { --c: var(--phosphor); }
+.sig-card[data-card="sound"] { --c: var(--warn); }
+.sig-card[data-card="printer"] { --c: var(--highlight); }
+.sig-card.fresh { border-color: var(--c); }
+.sig-card.locked { border-style: dashed; opacity: .55; }
+.card-head { display: flex; align-items: center; gap: 8px; }
+.card-head h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--c); }
+.sig-icon svg { display: block; width: 24px; height: 24px; fill: var(--c); shape-rendering: crispEdges; }
+.card-line { margin: 4px 0; color: var(--ink); font-size: 15px; }
+.card-sub { margin: 0; color: var(--dim); font-size: 14px; }
+.sig-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.sig-row input, .sig-row select { flex: 1; min-width: 0; }
+.sig-row .where { flex-basis: 100%; }
+#screen-text.shout { text-transform: uppercase; }
+.sig-row button, .sig-row input, .sig-row select { min-height: 32px; }
+.typed { border: 2px solid var(--warn); background: rgba(224, 160, 80, .12); color: var(--warn); padding: 6px 8px; margin: 4px 0 8px; }
 .feedback { min-height: 1.2em; margin: 6px 0; }
 .feedback .r { display: block; }
 .ok { color: var(--phosphor); }

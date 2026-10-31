@@ -61,15 +61,16 @@ function setRooms(rooms) {
     if (fresh) {
       S.order.push(r.id);
       S.rt[r.id] = { x: r.marycel.x, facing: r.marycel.facing, anim: "idle", t0: performance.now(),
-                     visible: r.marycel.location !== "away", walk: null, askedAt: null, alert: false };
+                     visible: r.marycel.location !== "away", walk: null, askedAt: null, alert: false,
+                     seen: new Set(), unread: 0, typed: null };
       image(`/assets/pixel/rooms/${r.id}.png`);
     }
+    checkUnlocks(r.id, fresh);
   }
 }
 
 function resetRooms(state) {
-  S.rooms = {}; S.order = []; S.rt = {};
-  clearTimeout(S.noticeTimer);
+  S.rooms = {}; S.order = []; S.rt = {}; S.ever = new Set();
   $("notice").textContent = "";
   setRooms(state.rooms);
   S.active = S.order[0];
@@ -287,7 +288,7 @@ function doorX(room) {
 }
 
 async function perform(id, res) {
-  const rt = S.rt[id];
+  const rt = S.rt[id], gen = S.generation;
   const before = S.rooms[id];
   const after = res.room;
   if (!res.refused) {
@@ -298,10 +299,14 @@ async function perform(id, res) {
     const dist = Math.abs(to - rt.x);
     if (id === S.active && dist > 8) sfx("steps", Math.max(1, Math.round(dist / WALK_SPEED / 0.36)));
     await walkTo(id, to);
+    if (gen !== S.generation) return;
     if (after.marycel.location === "away") rt.visible = false;
     rt.facing = after.marycel.facing;
   }
   S.rooms[id] = after;
+  checkUnlocks(id);
+  if (id !== S.active) rt.unread++;
+  if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", steps: after.steps };
   rt.anim = res.refused ? "idle" : res.anim;
   rt.t0 = performance.now();
   showLine(id, res);
@@ -317,6 +322,7 @@ async function perform(id, res) {
   const a = S.anims[rt.anim];
   const animTotal = a && !a.loop ? a.durations_ms.reduce((x, y) => x + y, 0) : 0;
   await sleep(Math.min(Math.max(res.ms || 600, animTotal, 900), 4000));
+  if (gen !== S.generation) return;
   rt.anim = after.marycel.seated === "yes" ? "sit_type" : "idle";
   if (rt.anim === "sit_type") rt.x = after.marycel.x;
   rt.t0 = performance.now();
@@ -393,11 +399,14 @@ function roomEnded(id) {
   checkOver();
 }
 
+// Notices stack, newest first and at most three, and each fades after 8 seconds,
+// so two that arrive together are both read.
 function notice(text) {
-  const el = $("notice");
-  el.textContent = text;
-  clearTimeout(S.noticeTimer);
-  S.noticeTimer = setTimeout(() => { el.textContent = ""; }, 8000);
+  const el = $("notice"), line = document.createElement("span");
+  line.textContent = text;
+  el.prepend(line);
+  while (el.children.length > 3) el.lastElementChild.remove();
+  setTimeout(() => line.remove(), 8000);
 }
 
 function checkOver() {
@@ -414,7 +423,8 @@ function buildPreviews() {
     b.type = "button";
     b.className = "preview";
     b.dataset.room = id;
-    b.innerHTML = `<canvas data-room="${id}" width="640" height="224"></canvas><span class="cap"><b></b><span></span></span>`;
+    b.innerHTML = `<canvas data-room="${id}" width="640" height="224"></canvas>` +
+      `<span class="cap"><b></b><span class="cap-foot"><span class="st"></span><span class="reach"></span></span></span>`;
     b.addEventListener("click", () => setActive(id));
     box.append(b);
   }
@@ -425,6 +435,7 @@ function setActive(id) {
   S.active = id;
   S.hover = null;
   S.rt[id].alert = false;
+  S.rt[id].unread = 0;
   Voice.say([]);
   $("tip").hidden = true;
   $("subtitle").textContent = "";
@@ -445,10 +456,20 @@ function updatePreviews() {
     b.setAttribute("aria-pressed", String(id === S.active));
     b.classList.toggle("alert", !!(room.question || S.rt[id].alert));
     b.querySelector(".cap b").textContent = room.label;
-    b.querySelector(".cap span").textContent = room.ended ? "night over" : room.question ? "asking you" :
-      room.marycel.location === "away" ? "away" : `step ${room.steps}`;
-    b.setAttribute("aria-label", `Switch to ${room.label}`);
+    const rt = S.rt[id], reply = !room.ended && (!!room.question || typedWaiting().includes(id));
+    const st = b.querySelector(".st");
+    st.textContent = room.ended ? "night over" : reply ? "Reply needed" : rt.unread ? `${rt.unread} unread` : "";
+    st.className = `st${reply ? " urgent" : rt.unread && !room.ended ? " unread" : ""}`;
+    b.querySelector(".reach").textContent = room.ended ? "" : reachWords(room);
+    b.setAttribute("aria-label", [`Switch to ${room.label}`, st.textContent, b.querySelector(".reach").textContent].filter(Boolean).join(", "));
   }
+}
+
+function reachWords(room) {
+  if (room.marycel.location === "away") return "out of the room";
+  const r = room.reach || {};
+  return r.screen && r.sound ? "sees the screen, hears sound" : r.screen ? "sees the screen" :
+    r.sound ? "hears sound" : "can't see the screen or hear sound";
 }
 
 // ------------------------------------------------------------------ hover labels
@@ -500,20 +521,25 @@ function onHover(e) {
 
 // ------------------------------------------------------------------ Elena's signals
 
-const GROUPS = [
-  ["Screen", ["screen_message", "answer_typed", "long_note", "highlight_file"]],
-  ["Sound", ["tone", "play_fragment"]],
-  ["Printer", ["print_message"]],
-  ["Recovery", ["request_pause", "transfer_response"]],
-  ["Wait", ["stay_silent"]],
-];
-const LOCK_HINTS = {
-  file_route: "Opens after Marycel looks at the files, notes, log, map or video.",
-  fragments: "Opens after she plays the recording.",
-  text_channel: "Opens after she runs diagnostics.",
-  print_route: "Opens after she turns on printing with the printer ready.",
-};
+// Three cards, one for each way Elena can reach Marycel. A signal shows only while it would
+// go through in at least one room (the server's signals_now, the same check a send makes),
+// and the first time one works in a room a notice says so.
 const CHOICE_WORDS = { agreed: "Yes", declined: "No", warned: "Danger", more_tests: "More tests" };
+const UNLOCK_WORDS = {
+  long_note: "screen repaired, longer messages work now.",
+  highlight_file: "she opened the files, you can point to one.",
+  play_fragment: "she played the recording, you can play pieces of it.",
+  print_message: "the printer works, you can print a note.",
+  request_pause: "the recovery is running, you can ask her to halt it.",
+};
+const UNLOCK_CARD = { long_note: "screen", highlight_file: "screen", request_pause: "screen",
+                      play_fragment: "sound", print_message: "printer" };
+const TYPED_STEPS = 3;  // her typed question waits this many of her steps for an answer
+const ICONS = {
+  screen: "M1 2h14v10H1zM3 4v6h10V4zM6 12h4v2h2v1H4v-1h2z",
+  sound: "M2 6h3l3-3h2v10H8L5 10H2zM12 5h1v1h1v4h-1v1h-1v-1h1V6h-1z",
+  printer: "M4 1h8v4H4zM1 5h14v7h-3v3H4v-3H1zM5 10v4h6v-4z",
+};
 
 function choiceLabel(sid, c) {
   if (sid === "highlight_file") {
@@ -524,63 +550,160 @@ function choiceLabel(sid, c) {
   return c.replace(/_/g, " ");
 }
 
+const sigById = (sid) => S.signals.find((s) => s.id === sid);
+const canSend = (sid) => S.order.some((id) => !S.rooms[id].ended && (S.rooms[id].signals_now || {})[sid]);
+
+// rooms whose Marycel typed on the screen and is still waiting for a reply
+function typedWaiting() {
+  return S.order.filter((id) => {
+    const t = S.rt[id].typed, r = S.rooms[id];
+    return t && !r.ended && r.steps - t.steps < TYPED_STEPS;
+  });
+}
+
+function icon(name) {
+  return `<span class="sig-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="${ICONS[name]}"/></svg></span>`;
+}
+
 function buildSignals() {
   const box = $("signals");
-  box.innerHTML = "";
-  const byId = Object.fromEntries(S.signals.map((s) => [s.id, s]));
-  for (const [title, ids] of GROUPS) {
-    const g = document.createElement("div");
-    g.className = "group";
-    g.innerHTML = `<h3>${title}</h3>`;
-    for (const sid of ids) {
-      const s = byId[sid];
-      if (!s) continue;
-      const row = document.createElement("form");
-      row.className = "sig";
-      row.dataset.signal = sid;
-      const label = document.createElement("span");
-      label.className = "label";
-      label.textContent = s.label;
-      row.append(label);
-      let input = null;
-      if (s.params.includes("text")) {
-        input = document.createElement("input");
-        input.name = "text";
-        input.maxLength = s.max_chars;
-        input.placeholder = `up to ${s.max_chars} letters`;
-        input.setAttribute("aria-label", s.label);
-        if (s.max_chars <= 12) input.addEventListener("input", () => { input.value = input.value.toUpperCase(); });
-        row.append(input);
-      } else if (s.choices) {
-        input = document.createElement("select");
-        input.name = "choice";
-        input.setAttribute("aria-label", s.label);
-        for (const c of s.choices) input.add(new Option(choiceLabel(sid, c), c));
-        row.append(input);
-      }
-      const send = document.createElement("button");
-      send.type = "submit";
-      send.textContent = sid === "stay_silent" ? "Stay silent" : "Send";
-      row.append(send);
-      const lock = document.createElement("span");
-      lock.className = "lock";
-      lock.textContent = LOCK_HINTS[s.unlock] || "";
-      row.append(lock);
-      row.addEventListener("submit", (e) => { e.preventDefault(); sendSignal(s, input); });
-      g.append(row);
+  box.innerHTML = `
+    <div id="typed" class="typed" role="status" hidden></div>
+    <form class="sig-card" data-card="screen">
+      <div class="card-head">${icon("screen")}<h3>Screen</h3></div>
+      <p class="card-line" id="screen-line"></p>
+      <div class="sig-row">
+        <input id="screen-text" name="text" autocomplete="off" aria-label="Message for the screen">
+        <button type="submit">Send</button>
+      </div>
+      <p class="card-sub" id="screen-count"></p>
+      <div class="sig-row" data-show="highlight_file">
+        <select id="file-choice" aria-label="File to point to"></select>
+        <button type="button" data-send="highlight_file">Point to this file</button>
+      </div>
+      <div class="sig-row" data-show="request_pause">
+        <button type="button" data-send="request_pause">Ask her to halt the recovery</button>
+        <span class="card-sub">Flashes PAUSE on the screen. She decides.</span>
+      </div>
+    </form>
+    <div class="sig-card" data-card="sound">
+      <div class="card-head">${icon("sound")}<h3>Sound</h3></div>
+      <p class="card-line">She hears it if she's in the room.</p>
+      <div class="sig-row" data-show="tone"><button type="button" data-send="tone">Crackle the speakers</button></div>
+      <div class="sig-row" data-show="play_fragment">
+        <select id="fragment-choice" aria-label="Piece of the recording"></select>
+        <button type="button" data-send="play_fragment">Play this piece</button>
+      </div>
+      <p class="card-sub" id="sound-off">The speakers are unplugged or muted.</p>
+    </div>
+    <form class="sig-card" data-card="printer">
+      <div class="card-head">${icon("printer")}<h3>Printer</h3></div>
+      <p class="card-line" id="printer-line"></p>
+      <div class="sig-row" data-show="print_message">
+        <input id="print-text" name="text" autocomplete="off" aria-label="Note to print">
+        <button type="submit">Print</button>
+      </div>
+    </form>`;
+  for (const [sel, sid] of [["file-choice", "highlight_file"], ["fragment-choice", "play_fragment"]]) {
+    for (const c of sigById(sid).choices) $(sel).add(new Option(choiceLabel(sid, c), c));
+  }
+  $("print-text").maxLength = sigById("print_message").max_chars;
+  const screenText = $("screen-text");
+  screenText.addEventListener("input", () => {
+    updateSignalLocks();
+  });
+  box.querySelector('[data-card="screen"]').addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const v = screenText.value.trim(), short = sigById("screen_message").max_chars;
+    if (!v) { notice("Type a few letters first."); screenText.focus(); return; }
+    if (v.length > short && !canSend("long_note")) {
+      notice(`The screen can only show ${short} letters right now.`);
+      screenText.focus();
+      return;
     }
-    box.append(g);
+    // one box: a long message is a note, a short one answers her if she typed, else a message
+    const sid = v.length > short ? "long_note" : typedWaiting().length ? "answer_typed" : "screen_message";
+    const reached = await sendSignal(sigById(sid), { name: "text", value: sid === "long_note" ? v : v.toUpperCase() });
+    if (reached) {
+      screenText.value = "";
+      for (const id of reached) S.rt[id].typed = null;
+      updateSignalLocks();
+    }
+  });
+  box.querySelector('[data-card="printer"]').addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = $("print-text"), v = input.value.trim();
+    if (!v) { notice("Type a few words first."); input.focus(); return; }
+    if (await sendSignal(sigById("print_message"), { name: "text", value: v })) input.value = "";
+  });
+  const choice = { highlight_file: "file-choice", play_fragment: "fragment-choice" };
+  for (const b of box.querySelectorAll("[data-send]")) {
+    const sid = b.dataset.send;
+    b.addEventListener("click", () => sendSignal(sigById(sid), choice[sid] ? { name: "choice", value: $(choice[sid]).value } : null));
   }
   updateSignalLocks();
 }
 
-function updateSignalLocks() {
-  for (const row of document.querySelectorAll(".sig")) {
-    const s = S.signals.find((x) => x.id === row.dataset.signal);
-    const open = S.order.some((id) => S.rooms[id].unlocked[s.unlock] && !S.rooms[id].ended);
-    row.querySelectorAll("input, select, button").forEach((el) => { el.disabled = !open || !S.started || S.over || S.paused; });
-    row.querySelector(".lock").hidden = open || !LOCK_HINTS[s.unlock];
+// The first time a signal works in a room, say so and light up its card for a moment.
+function checkUnlocks(id, quiet) {
+  const rt = S.rt[id], now = S.rooms[id].signals_now || {};
+  for (const [sid, ok] of Object.entries(now)) {
+    if (!ok || rt.seen.has(sid)) continue;
+    rt.seen.add(sid);
+    S.ever.add(sid);
+    if (quiet || !UNLOCK_WORDS[sid]) continue;
+    notice(`${S.rooms[id].label}: ${UNLOCK_WORDS[sid]}`);
+    const card = $("signals").querySelector(`[data-card="${UNLOCK_CARD[sid]}"]`);
+    card.classList.add("fresh");
+    setTimeout(() => card.classList.remove("fresh"), 6000);
   }
+}
+
+function updateSignalLocks() {
+  const box = $("signals");
+  if (!box.firstElementChild || !S.signals) return;
+  const live = S.started && !S.over && !S.paused && !S.sending;
+  box.classList.toggle("resting", S.paused);
+  box.querySelectorAll("button, input, select").forEach((el) => { el.disabled = !live; });
+  const open = S.order.filter((id) => !S.rooms[id].ended);
+  for (const el of box.querySelectorAll("[data-show]")) {
+    const sid = el.dataset.show, rooms = open.filter((id) => (S.rooms[id].signals_now || {})[sid]);
+    el.hidden = !rooms.length;
+    if (!el.classList.contains("sig-row")) continue;
+    const where = el.querySelector(".where") || el.appendChild(Object.assign(document.createElement("span"), { className: "card-sub where" }));
+    where.textContent = rooms.length && rooms.length < open.length ? `Works in: ${rooms.map((id) => S.rooms[id].label).join(", ")}` : "";
+  }
+
+  // Screen: one box, a few letters until diagnostics repair it
+  const screenOk = canSend("screen_message"), long = canSend("long_note");
+  const input = $("screen-text"), max = sigById(long ? "long_note" : "screen_message").max_chars;
+  input.maxLength = max;
+  input.placeholder = `type up to ${max} letters`;
+  input.disabled = input.nextElementSibling.disabled = !live || !screenOk;
+  $("screen-line").textContent = !screenOk ? "The computer is off." :
+    long ? "Repaired: longer messages work now." : "The screen is damaged: a few letters only.";
+  $("screen-count").textContent = `${input.value.length} / ${max}`;
+  $("screen-count").classList.toggle("bad", input.value.length > max);
+  input.classList.toggle("shout", !long);
+
+  // Sound: in each room the crackle gives way to the recording once she has played it
+  const tone = box.querySelector('[data-show="tone"]'), frag = box.querySelector('[data-show="play_fragment"]');
+  tone.hidden = !open.some((id) => { const now = S.rooms[id].signals_now || {}; return now.tone && !S.rt[id].seen.has("play_fragment"); });
+  $("sound-off").hidden = !tone.hidden || !frag.hidden;
+  $("sound-off").textContent = S.ever.has("play_fragment") ? "The speakers can't play the recording right now." :
+    "The speakers are unplugged or muted.";
+
+  // Printer: a dim preview until it works
+  const printOk = canSend("print_message");
+  box.querySelector('[data-card="printer"]').classList.toggle("locked", !printOk);
+  $("printer-line").textContent = printOk ? "She reads it when she picks up the printout." :
+    S.ever.has("print_message") ? "Not ready right now." : "Not working yet.";
+
+  // her typed question, with the room it came from
+  const typed = $("typed"), waiting = typedWaiting();
+  typed.hidden = !waiting.length;
+  typed.textContent = waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
+    (waiting.length ? " Your next screen message answers her." : "");
 }
 
 const STATUS_WORDS = {
@@ -592,19 +715,20 @@ const STATUS_WORDS = {
 };
 
 async function sendSignal(s, input) {
-  if (S.sending || S.paused) return;
+  if (S.sending || S.paused) return null;
   const params = {};
   if (input) {
     const v = input.value.trim();
     if (s.params.includes("text") && !v) {
       if (input.focus) input.focus();
       notice("Type a few letters first.");
-      return;
+      return null;
     }
     params[input.name] = v;
   }
   S.sending = true;
-  document.querySelectorAll(".sig button, .banner button").forEach((b) => { b.disabled = true; });
+  document.querySelectorAll("#signals button, .banner button").forEach((b) => { b.disabled = true; });
+  let ok = null;  // the rooms that took the signal
   try {
     const res = await api("/api/signal", { signal: s.id, params });
     if (s.id === "transfer_response") {
@@ -632,7 +756,9 @@ async function sendSignal(s, input) {
       `Sent. ${seen} of ${open.length} rooms noticed it right away.`);
     if (s.id === "tone" || s.id === "play_fragment") sfx("tone");
     else if (s.id === "print_message") sfx("printer");
-    else if (s.id !== "stay_silent") sfx("screen");
+    else sfx("screen");
+    const reached = S.order.filter((id) => !["unavailable", "ended"].includes(res.results[id].status));
+    ok = reached.length ? reached : null;
   } catch (e) {
     setStatus(e.message, true);
   } finally {
@@ -640,6 +766,7 @@ async function sendSignal(s, input) {
     $("banner").dataset.key = "";
     renderPanel();
   }
+  return ok;
 }
 
 // ------------------------------------------------------------------ panel and log
@@ -704,7 +831,7 @@ function renderAsk(room, rt) {
     setTimeout(() => { if (S.active) renderPanel(); }, rt.answer.until - performance.now() + 50);
     return;
   }
-  banner.querySelector(".q").textContent = `Marycel asks you: "${room.question}" She waits about ${CONSENT_WAIT_MS / 1000} seconds.`;
+  banner.querySelector(".q").textContent = `${room.label}: Marycel asks you "${room.question}" She waits about ${CONSENT_WAIT_MS / 1000} seconds.`;
   const s = S.signals.find((x) => x.id === "transfer_response");
   for (const c of s.choices) {
     const b = document.createElement("button");
