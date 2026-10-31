@@ -2,6 +2,8 @@
 
 Each source sheet holds six side-view poses in the same order:
 idle, walk contact A, walk contact B, sit/type, crouch-reach, read paper.
+An outfit can add pose sheets (EXTRA_SHEETS): six more poses each, the first a
+plain standing pose that sets their scale to match the main sheet.
 
 The script cuts the poses apart, cleans the noisy AI alpha, aligns every pose
 to a shared foot anchor, builds the animation sequences (walk, pick up, sit,
@@ -37,6 +39,17 @@ OUTFITS = {
     "green-cardigan": ("Hacktoberfest Week 4 - Marycel Character Concept.png", (0.52, 0.66)),
 }
 POSE_NAMES = ["idle", "walk_a", "walk_b", "sit_type", "crouch_reach", "read"]
+
+# Extra pose sheets, made with image generation from the main sheet. The first
+# pose of each is a standing reference that is scaled to the main idle height.
+EXTRA_SHEETS = {
+    "star-sweater": [
+        ("Marycel - Star Sweater Poses A.png",
+         ["ref_a", "pull_chair", "sit_lower", "sit_idle", "sit_reach", "reach_desk"]),
+        ("Marycel - Star Sweater Poses B.png",
+         ["ref_b", "lean_inspect", "write", "headphones", "kneel", "kneel_reach"]),
+    ],
+}
 
 # Export scales: label -> target standing height in pixels.
 # "hd" is a smooth reference matching the room concept (1672 px wide scene).
@@ -117,6 +130,17 @@ def label_components(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return labels, sizes
 
 
+def drop_edge_scraps(rgba: np.ndarray, share: float = 0.15) -> np.ndarray:
+    """Remove pieces of a neighbouring pose (a reaching hand) that a crop caught at its sides."""
+    labels, sizes = label_components(rgba[..., 3] > 0)
+    biggest = sizes[1:].max() if len(sizes) > 1 else 0
+    out = rgba.copy()
+    for lab in set(labels[:, 0]) | set(labels[:, -1]):
+        if lab and sizes[lab] < biggest * share:
+            out[labels == lab] = 0
+    return out
+
+
 def clean_alpha(rgba: np.ndarray) -> np.ndarray:
     alpha = rgba[..., 3] >= ALPHA_CUT
     labels, sizes = label_components(alpha)
@@ -180,16 +204,24 @@ def foot_anchor(rgba: np.ndarray, band: float = 0.07) -> int:
     return int(round((xs.min() + xs.max()) / 2))
 
 
-def extract_poses(sheet_path: Path) -> list[Pose]:
+def extract_poses(sheet_path: Path, names: list[str] = POSE_NAMES) -> list[Pose]:
     rgba = np.array(Image.open(sheet_path).convert("RGBA"))
     runs = column_runs(rgba[..., 3] >= ALPHA_CUT)
     runs = [r for r in runs if r[1] - r[0] > 80]
-    if len(runs) != len(POSE_NAMES):
-        raise SystemExit(f"{sheet_path.name}: expected 6 poses, found {len(runs)}: {runs}")
+    # poses that touch (an outstretched arm) are split at the thinnest column of the widest run
+    counts = (rgba[..., 3] >= ALPHA_CUT).sum(0)
+    while len(runs) < len(names):
+        x0, x1 = max(runs, key=lambda r: r[1] - r[0])
+        lo, hi = x0 + (x1 - x0) // 5, x1 - (x1 - x0) // 5
+        cut = lo + int(np.argmin(counts[lo:hi]))
+        i = runs.index((x0, x1))
+        runs[i:i + 1] = [(x0, cut), (cut + 1, x1)]
+    if len(runs) != len(names):
+        raise SystemExit(f"{sheet_path.name}: expected {len(names)} poses, found {len(runs)}: {runs}")
     poses = []
-    for name, (x0, x1) in zip(POSE_NAMES, runs):
-        crop = rgba[:, max(0, x0 - 4) : x1 + 4]
-        crop = trim(defringe(clean_alpha(crop)))
+    for name, (x0, x1) in zip(names, runs):
+        crop = drop_edge_scraps(clean_alpha(rgba[:, max(0, x0 - 4) : x1 + 4]))
+        crop = trim(defringe(crop))
         poses.append(Pose(name, Image.fromarray(crop), foot_anchor(crop)))
     return poses
 
@@ -313,6 +345,70 @@ def animations() -> dict[str, dict]:
     }
 
 
+# Animations built from the extra pose sheets. "chair" events say when the chair
+# starts and stops moving (frame indexes), so the game can slide it with her hands.
+EXTRA_ANIMATIONS = {
+    # Pulling the chair out (or pushing it back in): her hands stay on the backrest while the
+    # game slides her and the chair together between the "chair" events.
+    "pull_chair": {
+        "loop": False,
+        "events": {"chair_start": 1, "chair_end": 3},
+        "frames": [("idle_dip", 0, 0, 100), ("pull_chair", 0, 0, 260), ("pull_chair", 0, -1, 260),
+                   ("pull_chair", 0, 0, 120)],
+    },
+    "sit_down": {  # backing down onto the chair behind her
+        "loop": False,
+        "frames": [("idle", 0, 0, 100), ("idle_dip", 0, 0, 90), ("sit_lower", 0, 0, 200),
+                   ("sit_idle", -2, 1, 90), ("sit_idle", -2, 0, 160)],
+    },
+    "stand_up": {
+        "loop": False,
+        "frames": [("sit_idle", -2, 0, 100), ("sit_lower", 0, 0, 220), ("idle_dip", 0, 0, 120), ("idle", 0, 0, 120)],
+    },
+    # Seated poses shift so her hips stay where sit_type puts them.
+    "sit_idle": {"loop": True, "frames": [("sit_idle", -2, 0, 900), ("sit_idle_breathe", -2, 0, 700)]},
+    "sit_reach": {
+        "loop": False,
+        "frames": [("sit_idle", -2, 0, 120), ("sit_reach", -3, 0, 200), ("sit_reach", -3, 0, 500),
+                   ("sit_idle", -2, 0, 300)],
+    },
+    "reach_desk": {
+        "loop": False,
+        "events": {"grab": 2},
+        "frames": [("idle", 0, 0, 100), ("idle_dip", 0, 0, 90), ("reach_desk", 0, 0, 600),
+                   ("idle_dip", 0, 0, 90), ("idle", 0, 0, 200)],
+    },
+    "inspect": {"loop": True, "frames": [("lean_inspect", 0, 0, 800), ("lean_inspect_breathe", 0, 0, 700)]},
+    "write": {"loop": True, "frames": [("write", 0, 0, 500), ("write_breathe", 0, 0, 400)]},
+    "headphones": {
+        "loop": False,
+        "frames": [("idle", 0, 0, 120), ("headphones", 0, 0, 600), ("idle", 0, 0, 200)],
+    },
+    "kneel": {  # down through the crouch, a moment at the ofrenda, and up again
+        "loop": False,
+        "frames": [("idle", 0, 0, 120), ("idle_dip", 0, 0, 100), ("crouch_drop", 0, 0, 110),
+                   ("kneel", 0, 0, 1400), ("kneel_breathe", 0, 0, 1000), ("crouch_drop", 0, 0, 120),
+                   ("idle_dip", 0, 0, 100), ("idle", 0, 0, 200)],
+    },
+}
+
+
+def extra_poses(outfit: str, idle_h: int) -> list[Pose]:
+    """The outfit's extra sheets, each scaled so its standing reference matches idle."""
+    out = []
+    for filename, names in EXTRA_SHEETS.get(outfit, []):
+        poses = extract_poses(CONCEPT / filename, names)
+        factor = idle_h / poses[0].image.size[1]
+        for p in poses[1:]:
+            w, h = p.image.size
+            img = p.image.resize((round(w * factor), round(h * factor)), Image.LANCZOS)
+            arr = np.array(img)
+            arr[..., 3] = np.where(arr[..., 3] >= ALPHA_CUT, 255, 0)
+            arr = trim(arr)
+            out.append(Pose(p.name, Image.fromarray(arr), foot_anchor(arr)))
+    return out
+
+
 def build_pose_library(poses: list[Pose], seam: tuple[float, float]) -> dict[str, Pose]:
     lib = {p.name: p for p in poses}
     lib["walk_a_pass"] = passing_pose(lib["walk_a"], lib["idle"], *seam)
@@ -326,6 +422,9 @@ def build_pose_library(poses: list[Pose], seam: tuple[float, float]) -> dict[str
     mid = (stand_h * 0.35 + crouch_h * 0.65) / crouch_h
     lib["crouch_drop"] = squash(lib["crouch_reach"], mid, 0.97, "crouch_drop")
     lib["crouch_land"] = squash(lib["crouch_reach"], 0.96, 1.03, "crouch_land")
+    for name in ("sit_idle", "write", "lean_inspect", "kneel"):
+        if name in lib:
+            lib[name + "_breathe"] = squash(lib[name], 0.99, 1.005, name + "_breathe")
     return lib
 
 
@@ -349,6 +448,7 @@ def scale_pose(pose: Pose, factor: float) -> Pose:
 
 def export_outfit(outfit: str, lib: dict[str, Pose]) -> dict:
     anims = animations()
+    anims.update({k: v for k, v in EXTRA_ANIMATIONS.items() if all(f[0] in lib for f in v["frames"])})
     stand_h = lib["idle"].image.size[1]
     manifest = {"outfit": outfit, "scales": {}}
     for label, target_h in SCALES.items():
@@ -425,6 +525,7 @@ def main() -> None:
             "outfits": {}}
     for outfit, (filename, seam) in OUTFITS.items():
         poses = extract_poses(CONCEPT / filename)
+        poses += extra_poses(outfit, poses[0].image.size[1])
         lib = build_pose_library(poses, seam)
         full["outfits"][outfit] = export_outfit(outfit, lib)
         print(f"{outfit}: {', '.join(full['outfits'][outfit]['scales'])} exported")

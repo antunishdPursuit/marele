@@ -113,15 +113,20 @@ def printer_table(colours, w=50, h=38):
 
 
 def chair(colours):
-    p = Pen((20, 36), colours)
-    p.rect(9, 20, 10, 30, METAL[2], OUTLINE)  # gas column
-    p.line([(2, 32), (17, 32)], METAL[1])  # base
-    p.line([(3, 33), (16, 33)], OUTLINE)
-    for x in (2, 9, 16):
-        p.rect(x - 1, 34, x + 1, 35, INK)  # castors
-    p.box(1, 16, 18, 20, GREEN, mid=1)  # seat
-    p.rect(15, 2, 17, 17, METAL[1], OUTLINE)  # back post
-    p.box(13, 0, 19, 13, GREEN, mid=1)  # backrest
+    """Office chair, side view, seat towards the desk (left). Sized to Marycel's seated
+    pose: the seat top is 29 px above the floor, under her hips, and the backrest rises
+    behind her back so it shows while she sits."""
+    w, h = 34, 64
+    p = Pen((w, h), colours)
+    seat = h - 29  # seat top row
+    p.rect(15, seat + 5, 17, h - 6, METAL[2], OUTLINE)  # gas column
+    p.line([(2, h - 5), (31, h - 5)], METAL[1])  # base
+    p.line([(3, h - 4), (30, h - 4)], OUTLINE)
+    for x in (3, 16, 30):
+        p.rect(x - 1, h - 3, x + 1, h - 2, INK)  # castors
+    p.box(0, seat, 30, seat + 4, GREEN, mid=1)  # seat
+    p.rect(28, 14, 30, seat + 1, METAL[1], OUTLINE)  # back post
+    p.box(26, 2, 33, 26, GREEN, mid=1)  # backrest
     return p.img
 
 

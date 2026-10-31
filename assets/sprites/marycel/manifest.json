@@ -9,11 +9,11 @@
         "hd": {
           "cell": [
             235,
-            332
+            334
           ],
           "origin": [
             106,
-            328
+            330
           ],
           "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
           "animations": {
@@ -102,6 +102,140 @@
                 160
               ],
               "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pull_chair": {
+              "sheet": "pull_chair.png",
+              "frame_count": 4,
+              "durations_ms": [
+                100,
+                260,
+                260,
+                120
+              ],
+              "loop": false,
+              "events": {
+                "chair_start": 1,
+                "chair_end": 3
+              },
+              "faces": "right"
+            },
+            "sit_down": {
+              "sheet": "sit_down.png",
+              "frame_count": 5,
+              "durations_ms": [
+                100,
+                90,
+                200,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "stand_up": {
+              "sheet": "stand_up.png",
+              "frame_count": 4,
+              "durations_ms": [
+                100,
+                220,
+                120,
+                120
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_idle": {
+              "sheet": "sit_idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                900,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_reach": {
+              "sheet": "sit_reach.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                200,
+                500,
+                300
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "reach_desk": {
+              "sheet": "reach_desk.png",
+              "frame_count": 5,
+              "durations_ms": [
+                100,
+                90,
+                600,
+                90,
+                200
+              ],
+              "loop": false,
+              "events": {
+                "grab": 2
+              },
+              "faces": "right"
+            },
+            "inspect": {
+              "sheet": "inspect.png",
+              "frame_count": 2,
+              "durations_ms": [
+                800,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "write": {
+              "sheet": "write.png",
+              "frame_count": 2,
+              "durations_ms": [
+                500,
+                400
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "headphones": {
+              "sheet": "headphones.png",
+              "frame_count": 3,
+              "durations_ms": [
+                120,
+                600,
+                200
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "kneel": {
+              "sheet": "kneel.png",
+              "frame_count": 8,
+              "durations_ms": [
+                120,
+                100,
+                110,
+                1400,
+                1000,
+                120,
+                100,
+                200
+              ],
+              "loop": false,
               "events": {},
               "faces": "right"
             }
@@ -110,11 +244,11 @@
         "native": {
           "cell": [
             82,
-            114
+            115
           ],
           "origin": [
             37,
-            113
+            114
           ],
           "origin_note": "pixel position of the feet centre inside each cell; place this on the floor point",
           "animations": {
@@ -203,6 +337,140 @@
                 160
               ],
               "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "pull_chair": {
+              "sheet": "pull_chair.png",
+              "frame_count": 4,
+              "durations_ms": [
+                100,
+                260,
+                260,
+                120
+              ],
+              "loop": false,
+              "events": {
+                "chair_start": 1,
+                "chair_end": 3
+              },
+              "faces": "right"
+            },
+            "sit_down": {
+              "sheet": "sit_down.png",
+              "frame_count": 5,
+              "durations_ms": [
+                100,
+                90,
+                200,
+                90,
+                160
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "stand_up": {
+              "sheet": "stand_up.png",
+              "frame_count": 4,
+              "durations_ms": [
+                100,
+                220,
+                120,
+                120
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_idle": {
+              "sheet": "sit_idle.png",
+              "frame_count": 2,
+              "durations_ms": [
+                900,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "sit_reach": {
+              "sheet": "sit_reach.png",
+              "frame_count": 4,
+              "durations_ms": [
+                120,
+                200,
+                500,
+                300
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "reach_desk": {
+              "sheet": "reach_desk.png",
+              "frame_count": 5,
+              "durations_ms": [
+                100,
+                90,
+                600,
+                90,
+                200
+              ],
+              "loop": false,
+              "events": {
+                "grab": 2
+              },
+              "faces": "right"
+            },
+            "inspect": {
+              "sheet": "inspect.png",
+              "frame_count": 2,
+              "durations_ms": [
+                800,
+                700
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "write": {
+              "sheet": "write.png",
+              "frame_count": 2,
+              "durations_ms": [
+                500,
+                400
+              ],
+              "loop": true,
+              "events": {},
+              "faces": "right"
+            },
+            "headphones": {
+              "sheet": "headphones.png",
+              "frame_count": 3,
+              "durations_ms": [
+                120,
+                600,
+                200
+              ],
+              "loop": false,
+              "events": {},
+              "faces": "right"
+            },
+            "kneel": {
+              "sheet": "kneel.png",
+              "frame_count": 8,
+              "durations_ms": [
+                120,
+                100,
+                110,
+                1400,
+                1000,
+                120,
+                100,
+                200
+              ],
+              "loop": false,
               "events": {},
               "faces": "right"
             }
