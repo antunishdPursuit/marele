@@ -169,11 +169,11 @@ Generated from `data/catalog.json` by `tools/action_reference.py`; edit the cata
 | `tone` | Play a short tone | 0 | either (connected is yes; muted is no) or (headphones plugged is yes) | she is in the room (speakers) or through headphones |  |
 | `answer_typed` | Answer Marycel's typed question on the screen | 1 | power is on | she is doing read_screen or within 160 px and facing it | up to 12 characters. Same short limit as screen_message until the text channel is repaired. |
 | `highlight_file` | Point to an existing file, note or log entry | 1 | power is on; app is files or notes or log or map or video | she is doing read_screen | Choices: family_video, damaged_tail, notes, recovery_log, recovery_map. Can only point at material that exists; she cannot create evidence. |
-| `play_fragment` | Play a fragment of the recording | 2 | 'fragments' unlocked; story recording_status is seen or preserved | she is in the room (speakers) or through headphones | Choices: gathering, flower, working_late, warning. |
+| `play_fragment` | Play a fragment of the recording | 2 | either (connected is yes; muted is no) or (headphones plugged is yes); 'fragments' unlocked; story recording_status is seen or preserved | she is in the room (speakers) or through headphones | Choices: gathering, flower, working_late, warning. |
 | `long_note` | Write a longer note on the screen | 2 | 'text_channel' unlocked; power is on | she is doing read_screen | up to 120 characters. |
 | `print_message` | Print a note | 3 | computer print_route is on; power is on; cable is connected; paper is loaded; output is none; jam is no | she is doing read_held | up to 120 characters. A printed page is not read until Marycel collects and reads it. |
 | `request_pause` | Ask Marycel to pause the recovery | 4 | story recovery is active; power is on | she is doing read_screen or within 160 px and facing it | A warning, not a command: it cannot stop the recovery by itself. |
-| `transfer_response` | Agree, decline or warn about the transfer | 5 | power is on; story transfer_consent is asked | she is doing read_screen or she is in the room (speakers) | Choices: agreed, declined, warned, more_tests. Only after Marycel asks. Recorded separately from her interpretation. Silence becomes no_answer, which is never consent. |
+| `transfer_response` | Agree, decline or warn about the transfer | 5 | power is on; story transfer_consent is asked | she is doing read_screen or within 160 px and facing it or she is in the room (speakers) | Choices: agreed, declined, warned, more_tests. Only after Marycel asks. Recorded separately from her interpretation. Silence becomes no_answer, which is never consent. |
 
 ## Game events
 

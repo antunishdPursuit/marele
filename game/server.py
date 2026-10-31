@@ -128,17 +128,27 @@ class Room:
 
     # ---------------- Marycel
 
-    def step(self) -> dict:
+    def step(self, consent_expired: bool = False) -> dict:
         with self.lock:
             if self.ended:
                 return {"ended": True}
+            # the client's answer clock ran out: she has waited, so she gets the same step and
+            # cue training gave her for silence, and consent becomes no_answer
+            if consent_expired and self.w.world["transfer_consent"] == "asked":
+                self.w.game_event("consent_timeout")
+                waited = "You wait. Nothing appears on the screen."
+                self.mem.record({"action": "wait"}, waited)
+                self.mem.now = [waited]
             messages = [{"role": "system", "content": md.SYSTEM},
                         {"role": "user", "content": md.user_prompt(self.w, self.mem)}]
+            shown = len(self.mem.now)  # what reaches her after this point goes into her next prompt
         reply = chat(messages)
         with self.lock:
-            return self._apply(parse(reply), reply)
+            if self.ended:  # the night was ended while she was thinking: her step never happens
+                return {"ended": True}
+            return self._apply(parse(reply), reply, self.mem.now[shown:])
 
-    def _apply(self, s, reply) -> dict:
+    def _apply(self, s, reply, arrived=()) -> dict:
         w = self.w
         if s is None:  # not one JSON step: nothing happens, and she is told so
             s = {"action": "wait", "line": "..."}
@@ -164,7 +174,7 @@ class Room:
                 result, refused = "REFUSED: that step doesn't fit this action here.", True
         self.mem.record(s, result)
         noticed = [] if refused else self._echo()
-        self.mem.now = [result] + noticed
+        self.mem.now = [result] + noticed + list(arrived)
         self.steps += 1
         action = md.ACTIONS.get(s.get("action"), {})
         entry = {"n": self.steps, "step": {k: v for k, v in s.items() if k != "line"}, "line": s.get("line", ""),
@@ -459,7 +469,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json({"error": "This night has ended. Press End the night, then Play again."}, 410)
             if self.path == "/api/step":
                 room = game.rooms[body["room"]]
-                return self._json(room.step())
+                return self._json(room.step(consent_expired=bool(body.get("consent_expired"))))
             if self.path == "/api/signal":
                 sid, params = body["signal"], body.get("params") or {}
                 results = {name: r.signal(sid, params) for name, r in game.rooms.items()}

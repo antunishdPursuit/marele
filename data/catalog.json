@@ -3135,6 +3135,26 @@
    "stage": 2,
    "requires": [
     {
+     "any": [
+      [
+       {
+        "state": "connected",
+        "is": "yes"
+       },
+       {
+        "state": "muted",
+        "is": "no"
+       }
+      ],
+      [
+       {
+        "item_state": "headphones.plugged",
+        "is": "yes"
+       }
+      ]
+     ]
+    },
+    {
      "unlocked": "fragments"
     },
     {
@@ -3314,6 +3334,10 @@
    "perceived_if": [
     {
      "doing": "read_screen"
+    },
+    {
+     "marycel_within": 160,
+     "facing_device": true
     },
     {
      "in_room": true,
