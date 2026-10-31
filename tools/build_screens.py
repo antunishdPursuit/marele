@@ -6,6 +6,9 @@ Marycel at the computer). The game draws the title on the monitor and the
 buttons on top, so the art and the interface stay separate. This script saves them as JPEGs in
 assets/screens/ and prints where the monitor's glass is, for game.js (HOME).
 
+The four How to play pictures come from one generated sheet (UI - How to Play Icons.png)
+and are cut into a single 4x1 strip, how-icons.png.
+
     .venv/Scripts/python tools/build_screens.py
 """
 
@@ -18,6 +21,10 @@ from pixel_spec import CONCEPT, ROOT
 
 OUT = ROOT / "assets" / "screens"
 SOURCES = {"home": "BG - Home with Marycel B.png", "ending": "BG - Ending.png"}
+ICONS = "UI - How to Play Icons.png"
+# centre x, centre y and square size of each picture: rooms, computer, answer, Echo
+ICON_BOXES = [(252, 490, 410), (645, 500, 360), (978, 500, 360), (1335, 500, 380)]
+ICON_SIZE = 128
 
 
 def crt_glass(img: Image.Image) -> tuple[int, int, int, int]:
@@ -43,6 +50,15 @@ def main() -> None:
         print(f"{name}: {img.size[0]}x{img.size[1]}, {dest.stat().st_size // 1024} KB")
         if name == "home":
             print("  monitor glass:", crt_glass(img))
+    sheet = Image.open(CONCEPT / ICONS).convert("RGB")
+    strip = Image.new("RGB", (ICON_SIZE * len(ICON_BOXES), ICON_SIZE))
+    for i, (x, y, size) in enumerate(ICON_BOXES):
+        h = size // 2
+        tile = sheet.crop((x - h, y - h, x + h, y + h)).resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS)
+        strip.paste(tile, (i * ICON_SIZE, 0))
+    dest = OUT / "how-icons.png"
+    strip.save(dest, optimize=True)
+    print(f"icons: {strip.size[0]}x{strip.size[1]}, {dest.stat().st_size // 1024} KB")
 
 
 if __name__ == "__main__":
