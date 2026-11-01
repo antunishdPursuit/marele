@@ -1,82 +1,64 @@
 # Marele
 
-A pixel-art browser game for the Hacktoberfest 2026 Week 4 challenge ("Ghost in the Machine"), built around a fine-tuned open-weight model (Qwen3-8B with a LoRA trained on Tinker). Play it at https://marele.tech.
+**You are the ghost. The AI plays the person trying to repair your computer.**
 
-## Playing the game
+On Día de Muertos, Marycel opens an old family computer to recover a recording for the ofrenda. Elena is trapped inside it. Reach Marycel through the screen, speakers and printer while something else in the machine listens.
 
-The game runs in the browser, served by a small local Python server that uses the same rules engine and prompt format as the training data:
+Built for Hacktoberfest 2026 Week 4: **Ghost in the Machine**.
 
-```
-ollama serve                                # if Ollama is not already running
-.venv/Scripts/python game/server.py         # then open http://127.0.0.1:8765
-```
+**[Play at marele.tech](https://marele.tech)** · **[Watch the demo](https://youtu.be/0Zdtyoy7dzg)**
 
-You play Elena. Three versions of Marycel work in the three rooms at once; each of her steps comes from the local `marycel-v2` model (set `MARYCEL_MODEL` to try another Ollama model) and is checked by the rules before anything changes. One signal from Elena reaches all three rooms, and each Marycel notices it only if she can see or hear it from where she is. Elena chooses her signals from the words and notes Marycel was trained on (sent by the server as `phrases`); there is no free typing, because the current model reacts to those and not to arbitrary text. Clicking the computer, speakers or printer in the room (or the buttons under it) opens that device's menu of signals right there; nothing else in the room responds to clicks. The Echo acts on its own, as in training. Each room's night ends when a transfer completes, when she writes her note after Elena says no, after 120 steps, after 12 steps that repeat only two actions, or when you end the night; the ending comes from the room's actual state (a room ended before 3 steps is "over too soon"). Signals appear only while they would work in at least one room (`Room.signals_now`); `.venv/Scripts/python tools/check_signals.py` replays generated nights to confirm the panel and a real send agree. Pausing, opening How to play or hiding the tab stops new model calls.
+## How to play
 
-Hosted copy: with `MARYCEL_BACKEND=tinker` and `TINKER_API_KEY` set, the server asks the same fine-tuned checkpoint on Tinker instead of Ollama, prompted exactly as in training. Each visitor gets their own night (a cookie), and `DAILY_STEP_LIMIT` (default 6000 steps, about $3 a day) caps the cost. With `KEY_VALUE_URL` set (a Render Key Value store, `marele-steps` in `render.yaml`) the day's count survives restarts and the free plan's sleep; if the store can't be reached, a count in memory takes over. `render.yaml` deploys it on Render; the key is set in Render's dashboard, never in the repository.
+- Watch one room and switch between three parallel versions of the same night.
+- Send a signal from the computer, speakers or printer. It reaches all three rooms; each Marycel notices only what she can see or hear.
+- Unlock more ways to communicate as she repairs the equipment.
+- Answer when she asks for permission. You influence her decisions; you do not control her movement.
 
-`game/server.py` holds the rooms and talks to the model; `game/web/` is the client (canvas drawing at 640x224 per room, scaled to fit its column with nearest-neighbour sampling, plus HTML controls). The GPU needs about 6.3 GB free for the model.
+The rooms can reach different endings. Their names and conditions are left for you to discover.
 
-Sound: effects are synthesized in the browser (`game/web/sound.js`; try them at `/game/web/sound-test.html`). Music is generated offline with ACE-Step 1.5 (MIT code and weights) by `tools/make_music.py`, run with ACE-Step's own Python (installed separately, outside this repository): each room has its own theme (repair shop: ofrenda, electronics workshop: workshop, family home: home), the eerie passage music plays while the passage stirs in the room on screen, and morning plays over the endings. Each theme is a playlist of four one-minute takes in `game/web/audio/music/`; prompts and seeds are logged in `game/web/audio/takes/log.jsonl`, credits in `game/web/audio/CREDITS.md`.
+The hosted game runs on Render with model inference through Tinker. Its first load after inactivity can take about a minute. Use one tab: opening another can reset your night.
 
-Marycel's voice is recorded ahead of play, not generated live: `tools/record_voice.py lines` collects every line she knows (from the training data and the trained model's test replies), and `tools/record_voice.py kokoro`, run with a separate Kokoro environment (Apache-2.0), speaks them all in one preset voice (af_heart), so every line sounds like the same person. Only the room on screen speaks; a line without a recording stays a subtitle.
+## The AI inside the room
 
-## What fine-tuning changed
+Marycel is **Qwen3-8B**, fine-tuned with a rank-32 LoRA on **Tinker**. She receives the room observations and chooses an action plus a short spoken line. The game checks every action and blocks transfers without Elena's consent.
 
-Scored with `tools/score_steps.py` on the 394 held-out steps that still apply under the final rules (none of them seen in training):
+On 394 held-out steps replayable under the current rules:
 
-| | Qwen3-8B, untrained | `marycel-v2` on Tinker |
-|---|---|---|
-| Steps the rules accept | 64.2% | 99.2% |
-| Same action as the reference step | 26.6% | 75.6% |
-| Tried to move a voice without Elena's yes | 23 | 0 |
+| Measure | Base model | Fine-tuned v2 |
+| --- | --- | --- |
+| Actions accepted by the rules | 64.2% | 99.2% |
+| Same action as the scripted reference | 26.6% | 75.6% |
+| Transfer attempts without consent | 23 | 0 |
 
-The local Q5_0 copy in Ollama scores 99.5% valid, 75.6% same action and 0 transfers without a yes on the same steps.
+These scores use saved predictions, not live player outcomes. Another 25 held-out histories could not replay under the current rules and were excluded for both models. Reaction quality still needs work; Elena currently chooses preset signals rather than typing freely.
 
-## Showcase video
+## Run locally
 
-A 1.5-minute video introduces the game: Elena's story, one signal reaching all three rooms, the Echo, Marycel asking before she moves a voice (real gameplay recorded on marele.tech), what fine-tuning changed, and the morning screen. It was made outside this repository with HyperFrames, from the game's own rooms, props, Marycel's sprite animations, music and sound effects, plus two story stills. Elena narrates in Spanish and English (Kokoro, preset voice ef_dora) with English subtitles; Marycel's lines are her in-game recordings.
+The local path has been used on Windows. It needs Python 3.12 or later, Ollama, and the fine-tuned `marycel-v2` model already imported into Ollama. The model weights are **not included**; setup and alternatives are in the [developer guide](docs/DEVELOPMENT.md).
 
-## Character sprites
+From the repository folder in PowerShell:
 
-`tools/build_character_sprites.py` turns the two Marycel character sheets (star sweater, green cardigan) into animation-ready sprites in `assets/sprites/marycel/`:
-
-- Animations: `idle`, `walk` (4-frame loop), `pickup` (kneel, reach, stand), `pickup_and_read`, `read`, `sit_type`, `pull_chair`, `sit_down`, `stand_up`, `sit_idle`, `sit_reach`, `reach_desk`, `look_out`, `hold`, `inspect`, `write`, `headphones`, `kneel`.
-- Two scales: `hd` (320 px tall, a smooth reference) and `native` (110 px tall, the game asset on the shared pixel grid and palette).
-- Each animation has a horizontal sheet (`walk.png`), single frames in `frames/`, and a `*_preview.gif`.
-- `manifest.json` lists cell size, the foot origin (place it on the floor point), frame durations, looping, and gameplay events (`pickup` fires `grab` on frame 5 and `item_in_hand` on frame 7). Sprites face right; mirror them to face left.
-
-## Pixel grid
-
-All game art follows one grid, set in `tools/pixel_spec.py`. The art is drawn for a 640x360 screen; the game shows a 640x224 room view and scales it to fit the window with nearest-neighbour sampling, so on most windows the scale is not a whole number. Sprites are never resized in the art itself. Rooms are 960x224 (1.5 screens wide; the 640 px view scrolls to follow Marycel), Marycel is 110 px tall, and everything uses the shared 73-colour palette (`assets/pixel/palette.gpl`, loadable in Pixelorama).
-
-`tools/build_pixel_assets.py` rebuilds everything: the palette, the three rooms (`assets/pixel/rooms`, drawn pixel by pixel in `tools/build_rooms.py`), Marycel's sprites, the props (`assets/pixel/props`, drawn in `tools/build_props.py`, each object Marycel can use with an `_outline` hover sprite), and per room a full-width scene (`*-room.png`) plus a test screen showing the view around Marycel (`assets/pixel/mockup`). It then checks every native file against the palette and alpha rules, and fails if any break them.
-
-```
-uv venv .venv && uv pip install --python .venv pillow numpy
-.venv/Scripts/python tools/build_pixel_assets.py
+```powershell
+py -3 -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+ollama list
+.venv/Scripts/python game/server.py
 ```
 
-Walk passing frames and the crouch in-betweens are generated from the sheet poses, not hand-drawn. Replace them with drawn frames if they don't hold up in the game.
+Start Ollama first if it is not running. Confirm that `ollama list` includes `marycel-v2`, then open [localhost:8765](http://127.0.0.1:8765). The model file is about 5.6 GB; the tested local runtime needed about 6.3 GB of free GPU memory. Stop the server with Ctrl+C.
 
-## Room data
+## Development
 
-`data/catalog.json` holds the shared rules: object kinds and their states, which sprite shows each state, Marycel's actions (with what each requires and changes) and Elena's signals (with what must work and when Marycel perceives them). `data/rooms/<room>.json` places each room's objects and items and sets their starting states. The art builder composes every scene from these files, so the picture and the data agree. `.venv/Scripts/python tools/room_data.py` checks the data on its own; the full build checks it too. `data/ACTIONS.md` lists every action and signal in plain words, grouped by object; regenerate it with `.venv/Scripts/python tools/action_reference.py` after editing the catalog. `.venv/Scripts/python tools/sim.py` is the reference rules engine: it applies actions exactly as the catalog describes, plays a complete route in each room, checks that forbidden moves and malformed steps are refused, and pauses, stops and interrupts the long actions (recovery, copying, transfer). `data/content.json` holds what Marycel can read, hear and see (files, notes, the recovery log, the recording, the damaged segment, the streams, photos, printouts, each room's notebook and window); `tools/observe.py` turns it and the live state into her observations and decides whether she notices a signal (distance, facing, and the speaker or headphone route). The simulation also runs the Echo, which can only reuse phrases Marycel has exposed.
+See the [developer guide](docs/DEVELOPMENT.md) for hosted inference, model training and export, asset tools, and checks.
 
-`tools/make_dataset.py` writes the training data for Marycel's model to `data/training/` (regenerable, about 55 MB): it plays randomized episodes in all three rooms through the rules engine, with Elena and the Echo acting on their own, and records each of Marycel's steps as a chat example (system prompt with the rules and actions; user prompt with what she can see, her recent steps and what just happened; the step as one JSON object plus a short `line`). Some episodes include a refused step, and the example after it teaches the fix. Training and held-out evaluation use separate seeds. `--check` replays every example through the rules; `tools/score_steps.py` scores a model's replies on the held-out set (valid by the rules, same action, same step).
+## Credits and license
 
-Fine-tuning runs on Tinker (a LoRA on Qwen3-8B with thinking off): `tools/train_tinker.py --dry-run` counts tokens and estimates the cost without any API calls; without flags it trains (needs `TINKER_API_KEY` in the environment or in a project `.env`, which must never be shared or committed); `--sample <tinker checkpoint path>` writes the held-out replies for `score_steps.py`. `tools/run_ollama.py` does the same for a local Ollama model, such as the untrained baseline.
+Original code: [MIT](LICENSE). Models and dependencies retain their own licenses.
 
-`tools/export_model.py` brings a trained checkpoint to this machine: it downloads the adapter from Tinker, merges it into Qwen3-8B, converts it to GGUF with llama.cpp's converter, shrinks it to Q5_0 with `tools/quantize_gguf.py` (about 5.6 GB, so it runs fully on a 10 GB GPU) and imports it into Ollama as `marycel-v2`. Model files stay in `data/models/` and are not part of the repository.
-
-
-## Credits and licenses
-
-The code in this repository is MIT-licensed (see `LICENSE`). Everything it builds on allows commercial use:
-
-- Marycel's model: Qwen3-8B (Apache-2.0) with a LoRA fine-tuned on Thinking Machines' Tinker; run locally with Ollama after conversion with llama.cpp (MIT).
-- Music: ACE-Step 1.5 (MIT code and weights), details in `game/web/audio/CREDITS.md`.
-- Marycel's voice: Kokoro 82M (Apache-2.0), preset voice af_heart, the same voice for every line; not a clone of anyone.
-- Title and morning screen backgrounds (`assets/screens/`): painted with OpenAI image generation, then prepared by `tools/build_screens.py`. The game draws the text, buttons and room snapshots on top.
-- Fonts: SIL Open Font License; license texts are in `game/web/fonts/`.
-- Showcase video: Elena's narration with Kokoro 82M (Apache-2.0, preset voice ef_dora); the two story stills made with OpenAI image generation. The video's files are not part of this repository.
+- **Qwen3-8B** and **Kokoro 82M**: Apache-2.0. Marycel uses Kokoro's preset af_heart voice.
+- **ACE-Step 1.5**: MIT; [music credits](game/web/audio/CREDITS.md).
+- **Ollama / llama.cpp**: local inference and model conversion.
+- Title and morning backgrounds: OpenAI image generation.
+- Bundled fonts: SIL Open Font License; notices in [game/web/fonts](game/web/fonts/).
+- Demo narration: Kokoro's preset ef_dora voice; story stills use OpenAI image generation.
