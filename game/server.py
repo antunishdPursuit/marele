@@ -281,7 +281,8 @@ class Room:
         w, world = self.w, self.w.world
         right = world["selected_stream"] == self.w.room["hidden"]["elena_stream"]
         if world["transfer"] == "completed":
-            key = "bridge" if right else "wrong_voice"
+            # the Story Bible's bridge also needs the family video saved; without it, half a bridge
+            key = ("bridge" if world["video_copy"] == "preserved" else "half_bridge") if right else "wrong_voice"
         elif world["transfer_consent"] == "declined" and world["passage"] in ("contained", "transfer"):
             key = "promise"
         elif world["video_copy"] == "preserved":

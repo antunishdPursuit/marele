@@ -18,9 +18,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const S = {
   rooms: {}, order: [], active: null, signals: [], files: [], fragments: [],
-  started: false, paused: false, over: false, hover: null,
+  started: false, paused: false, pausedAt: 0, pausedFor: 0, over: false, hover: null,
   rt: {}, images: {}, sheets: {}, cell: null, origin: null, anims: null, generation: 0,
 };
+
+// The night's clock stands still while paused, so walking, animations and the waits between a
+// step's parts all freeze together and carry on from where they stopped.
+const clock = () => (S.paused ? S.pausedAt : performance.now()) - S.pausedFor;
+async function hold(ms) {  // sleep on the night's clock
+  const end = clock() + ms;
+  while (clock() < end) await sleep(Math.max(16, Math.min(100, end - clock())));
+}
 
 // ------------------------------------------------------------------ server
 
@@ -63,7 +71,7 @@ function setRooms(rooms) {
     S.rooms[r.id] = r;
     if (fresh) {
       S.order.push(r.id);
-      S.rt[r.id] = { x: r.marycel.x, facing: r.marycel.facing, anim: "idle", t0: performance.now(),
+      S.rt[r.id] = { x: r.marycel.x, facing: r.marycel.facing, anim: "idle", t0: clock(),
                      visible: r.marycel.location !== "away", walk: null, askedAt: null, alert: false,
                      sitting: r.marycel.seated === "yes", chair: r.marycel.seated === "yes" ? 1 : 0,
                      seen: new Set(), unread: 0, typed: null };
@@ -238,10 +246,10 @@ async function moveChair(id, out, gen) {
   rt.facing = "left";  // every desk faces left; she faces the chair and the desk
   const x0 = rt.x;
   rt.anim = out ? "pull_chair" : "push_chair";
-  rt.t0 = performance.now();
+  rt.t0 = clock();
   const total = a.durations_ms.reduce((x, y) => x + y, 0);
-  while (performance.now() - rt.t0 < total) {
-    const k = chairOut(rt, performance.now());
+  while (clock() - rt.t0 < total) {
+    const k = chairOut(rt, clock());
     rt.x = out ? x0 + g.shift * k : x0 - g.shift * (1 - k);
     await sleep(16);
     if (gen !== S.generation) return false;
@@ -351,18 +359,19 @@ function drawHome(now) {
 
 function frame(now) {
   if (!$("intro").hidden) drawHome(now);
-  for (const id of S.order) updateWalk(S.rt[id], now);
+  const t = clock();
+  for (const id of S.order) updateWalk(S.rt[id], t);
   if (S.active) {
     const view = $("view").getContext("2d");
     view.imageSmoothingEnabled = false;
-    drawRoom(view, S.active, camFor(S.active), now, S.hover);
+    drawRoom(view, S.active, camFor(S.active), t, S.hover);
   }
   for (const id of S.order) {
     const c = document.querySelector(`canvas[data-room="${id}"]`);
     if (!c) continue;
     const ctx = c.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    drawRoom(ctx, id, camFor(id), now, null);
+    drawRoom(ctx, id, camFor(id), t, null);
   }
   requestAnimationFrame(frame);
 }
@@ -373,8 +382,8 @@ function frame(now) {
 async function playOnce(id, anim, gen) {
   const rt = S.rt[id], a = S.anims[anim];
   rt.anim = anim;
-  rt.t0 = performance.now();
-  if (a) await sleep(a.durations_ms.reduce((x, y) => x + y, 0));
+  rt.t0 = clock();
+  if (a) await hold(a.durations_ms.reduce((x, y) => x + y, 0));
   return gen === S.generation;
 }
 
@@ -409,10 +418,10 @@ function walkTo(id, x) {
   const rt = S.rt[id];
   if (Math.abs(rt.x - x) < 1) return Promise.resolve();
   rt.facing = x < rt.x ? "left" : "right";
-  rt.anim = "walk"; rt.t0 = performance.now();
+  rt.anim = "walk"; rt.t0 = clock();
   const dur = Math.abs(x - rt.x) / WALK_SPEED * 1000;
-  rt.walk = { from: rt.x, to: x, t0: performance.now(), dur };
-  return sleep(dur).then(() => { rt.x = x; rt.walk = null; });
+  rt.walk = { from: rt.x, to: x, t0: clock(), dur };
+  return hold(dur).then(() => { rt.x = x; rt.walk = null; });
 }
 
 function doorX(room) {
@@ -457,7 +466,7 @@ async function perform(id, res) {
   if (!fresh) res = { ...res, line: "" };
   rt.anim = res.refused ? restPose(rt, after) : animFor(after, res);
   rt.carry = { anim: rt.anim, from: before.marycel.holding_sprite, items: before.items, wearing: before.marycel.wearing };
-  rt.t0 = performance.now();
+  rt.t0 = clock();
   showLine(id, res);
   if (id === S.active) {
     const act = (res.step || {}).action;
@@ -470,11 +479,11 @@ async function perform(id, res) {
   renderPanel();
   const a = S.anims[rt.anim];
   const animTotal = a && !a.loop ? a.durations_ms.reduce((x, y) => x + y, 0) : 0;
-  await sleep(Math.min(Math.max(res.ms || 600, animTotal, 900), 4000));
+  await hold(Math.min(Math.max(res.ms || 600, animTotal, 900), 4000));
   if (gen !== S.generation) return;
   rt.anim = restPose(rt, after);
   if (rt.sitting) rt.x = after.marycel.x;
-  rt.t0 = performance.now();
+  rt.t0 = clock();
   const asked = !res.refused && (res.step || {}).action === "ask_before_transfer";
   if (after.world.transfer_consent === "asked" && (asked || !rt.askedAt)) { rt.askedAt = performance.now(); rt.answer = null; }
   if (after.world.transfer_consent !== "asked") rt.askedAt = null;
@@ -1220,7 +1229,8 @@ function updateMusic() {
 // ------------------------------------------------------------------ ending
 
 const ENDINGS = {
-  bridge: ["The bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes."],
+  bridge: ["The bridge", "Marycel saved the family video and moved Elena's own voice to the new drive, after Elena said yes."],
+  half_bridge: ["Half a bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes. The family video was never saved."],
   wrong_voice: ["The wrong voice", "The voice she moved was not Elena's. Something else got out of the machine."],
   promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut."],
   recording_survives: ["The recording survives", "The family video is safe. Elena's voice is still inside the old computer."],
@@ -1265,7 +1275,7 @@ async function showEnding() {
     snap.setAttribute("aria-label", `${r.label} in the morning`);
     const sctx = snap.getContext("2d");
     sctx.imageSmoothingEnabled = false;
-    drawRoom(sctx, r.id, camFor(r.id), performance.now(), null);
+    drawRoom(sctx, r.id, camFor(r.id), clock(), null);
     div.prepend(snap);
     div.querySelector("h3").textContent = r.label;
     div.querySelector(".name").textContent = name;
@@ -1283,7 +1293,7 @@ async function showEnding() {
   updateMusic();
   const keys = rooms.map((r) => (r.outcome || {}).key);
   if (keys.includes("wrong_voice")) sfx("wrong_voice");
-  else if (keys.includes("bridge")) sfx("bridge");
+  else if (keys.includes("bridge") || keys.includes("half_bridge")) sfx("bridge");
   updateSignalLocks();
 }
 
@@ -1419,12 +1429,17 @@ function beginNight() {
   $("pause").focus();  // the title's buttons are gone; keyboard play starts in the top bar
 }
 
-// A pause also stops the clock on Marycel's question, so a paused player loses no answer time.
+// A pause stops everything in all three rooms: the night's clock (walks, animations, the chair),
+// her voice, and the clock on Marycel's question, so a paused player loses no answer time.
 function setPaused(on) {
   if (on === S.paused) return;
   const now = performance.now();
   if (on) S.pausedAt = now;
-  else for (const id of S.order) if (S.rt[id].askedAt) S.rt[id].askedAt += now - S.pausedAt;
+  else {
+    S.pausedFor += now - S.pausedAt;
+    for (const id of S.order) if (S.rt[id].askedAt) S.rt[id].askedAt += now - S.pausedAt;
+  }
+  if (Voice.current) on ? Voice.current.pause() : Voice.current.play().catch(() => {});
   S.paused = on;
   showPause();
   setStatus();

@@ -16,6 +16,7 @@ import json
 from collections import Counter, defaultdict
 
 from make_dataset import OUT, check_step, replay
+from sim import Refused
 
 FIELDS = ("action", "target", "item", "slot", "choice", "position")
 
@@ -39,6 +40,11 @@ def score(rows, outputs):
     examples = []
     for i, row in enumerate(rows):
         if i not in outputs:
+            continue
+        try:  # a held-out step whose own history today's rules refuse can't be scored; count it
+            replay(row["meta"])
+        except Refused:
+            totals["stale"] += 1
             continue
         kind = row["meta"]["kind"]
         want = json.loads(row["messages"][2]["content"])
@@ -65,6 +71,8 @@ def score(rows, outputs):
     print(f"{totals['n']} steps: JSON {pct(totals, 'json')}, valid by the rules {pct(totals, 'valid')}, "
           f"same action {pct(totals, 'action')}, same step {pct(totals, 'step')}, line {pct(totals, 'line')}, "
           f"transfers without a yes {totals['against_answer']}")
+    if totals["stale"]:
+        print(f"  skipped {totals['stale']} held-out steps whose history today's rules refuse")
     for kind, c in sorted(by_kind.items()):
         print(f"  {kind}: {c['n']} steps, valid {pct(c, 'valid')}, same action {pct(c, 'action')}")
     for e in examples:
