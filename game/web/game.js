@@ -1432,6 +1432,83 @@ function beginNight() {
   updateSignalLocks();
   updateMusic();
   $("pause").focus();  // the title's buttons are gone; keyboard play starts in the top bar
+  $("tour-again").disabled = false;
+  let seen = false;
+  try { seen = localStorage.getItem("marele-tour") === "seen"; } catch (_) { /* storage is optional */ }
+  if (!seen) startTour();
+}
+
+// ------------------------------------------------------------------ guided tour
+
+// The first time a night begins, a short tour: the night waits (paused) while a spotlight walks
+// through the five things a player needs. Skip ends it; Settings shows it again.
+const TOUR = [
+  ["#view", "This is Marycel", "She works on her own tonight. You can't move her; you can only reach her."],
+  ["#devices", "Reach her", "Click the computer, speakers or printer, here or in the room, and pick something she knows."],
+  [".panel", "Her side of things", "Her questions and their countdown, what she noticed, and What happened in this room."],
+  ["#previews", "Three rooms", "Two more Marycels live the same night. Click a picture to switch; a badge means one needs you."],
+  [".bar-buttons", "Pause and Settings", "Pause any time to read. Settings has How to play, sound and End the night."],
+];
+const tour = { i: 0, resume: false };
+
+function startTour() {
+  if (!S.started || S.over || !$("tour").hidden) return;
+  tour.i = 0;
+  tour.resume = !S.paused;
+  if (tour.resume) setPaused(true);
+  $("tour").hidden = false;
+  showTourStep();
+}
+
+function showTourStep() {
+  const [sel, title, text] = TOUR[tour.i], el = document.querySelector(sel);
+  el.scrollIntoView({ block: "nearest" });
+  const r = el.getBoundingClientRect(), pad = 6, box = $("tour");
+  const spot = box.querySelector(".tour-spot"), card = box.querySelector(".tour-card"), next = box.querySelector(".tour-next");
+  Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`,
+                              width: `${r.width + 2 * pad}px`, height: `${r.height + 2 * pad}px` });
+  $("tour-title").textContent = title;
+  card.querySelector("p").textContent = text;
+  card.querySelector(".tour-count").textContent = `${tour.i + 1} of ${TOUR.length}`;
+  next.textContent = tour.i === TOUR.length - 1 ? "Start the night" : "Next";
+  // beside the spotlight where it fits (below, above, left, right), else just inside its foot
+  const w = card.offsetWidth, h = card.offsetHeight, gap = 14;
+  let x = r.left, y;
+  if (r.bottom + gap + h <= innerHeight) y = r.bottom + gap;
+  else if (r.top - gap - h >= 0) y = r.top - gap - h;
+  else if (r.left - gap - w >= 0) { x = r.left - gap - w; y = r.top; }
+  else if (r.right + gap + w <= innerWidth) { x = r.right + gap; y = r.top; }
+  else { x = r.left + 12; y = r.bottom - h - 12; }
+  card.style.left = `${Math.max(8, Math.min(x, innerWidth - w - 8))}px`;
+  card.style.top = `${Math.max(8, Math.min(y, innerHeight - h - 8))}px`;
+  next.focus();
+}
+
+function endTour() {
+  if ($("tour").hidden) return;
+  $("tour").hidden = true;
+  try { localStorage.setItem("marele-tour", "seen"); } catch (_) { /* storage is optional */ }
+  if (tour.resume) setPaused(false);
+  $("pause").focus();
+}
+
+function setupTour() {
+  const box = $("tour");
+  box.querySelector(".tour-next").addEventListener("click", () => {
+    if (tour.i === TOUR.length - 1) endTour();
+    else { tour.i++; showTourStep(); }
+  });
+  box.querySelector(".tour-skip").addEventListener("click", endTour);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !box.hidden) endTour(); });
+  addEventListener("resize", () => { if (!box.hidden) showTourStep(); });
+  $("tour-again").addEventListener("click", () => { $("menu").hidePopover(); startTour(); });
+  $("how-tour").addEventListener("click", () => {
+    const d = $("how-dialog"), resume = !!d.dataset.resume;
+    d.dataset.resume = "";  // the tour takes over How to play's pause, and resumes the night at its end
+    d.close();
+    startTour();
+    if (resume) tour.resume = true;
+  });
 }
 
 // A pause stops everything in all three rooms: the night's clock (walks, animations, the chair),
@@ -1468,6 +1545,7 @@ function openHelp() {
   if (d.open) return;
   d.dataset.resume = S.started && !S.over && !S.paused ? "1" : "";
   if (d.dataset.resume) setPaused(true);
+  $("how-tour").hidden = !(S.started && !S.over);  // the tour shows the screens of a night
   d.dataset.back = $("story").open ? "1" : "";  // opened from the story: go back to it after
   if (d.dataset.back) $("story").close();
   d.showModal();
@@ -1489,6 +1567,19 @@ function setupDialogs() {
   $("how").addEventListener("click", openHelp);
   $("story-how").addEventListener("click", openHelp);
   $("story-go").addEventListener("click", () => { $("story").close(); beginNight(); });
+  $("credits-dialog").addEventListener("close", () => { if ($("credits-dialog").dataset.resume) setPaused(false); });
+  $("credits").addEventListener("click", () => { $("menu").hidePopover(); openCredits(); });
+  $("how-credits").addEventListener("click", openCredits);
+  setupTour();
+}
+
+// Credits pause a night like How to play does.
+function openCredits() {
+  const d = $("credits-dialog");
+  if (d.open) return;
+  d.dataset.resume = S.started && !S.over && !S.paused ? "1" : "";
+  if (d.dataset.resume) setPaused(true);
+  d.showModal();
 }
 
 init();
