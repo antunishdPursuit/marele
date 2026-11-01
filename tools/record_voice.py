@@ -1,9 +1,13 @@
-"""Records Marycel's voice ahead of play: every line she knows, spoken by the
-Qwen3-TTS VoiceDesign "warm" voice (Apache-2.0), used directly (no cloning).
+"""Records Marycel's voice ahead of play: every line she knows, in one fixed voice.
 In the game a recorded line plays with its subtitle; any other line stays text.
 
-    .venv/Scripts/python tools/record_voice.py lines                        # game env: collect the lines
-    <Tools/Voice/qwen3tts>/.venv/Scripts/python tools/record_voice.py record  # GPU: record them (ollama stop marycel-v2 first)
+The game uses Kokoro's preset voice af_heart (Apache-2.0): a preset speaker, so every
+line has the same voice. The earlier Qwen3-TTS VoiceDesign recording ("record") re-created
+the voice from a description on every call, and lines drifted. Neither is a clone.
+
+    .venv/Scripts/python tools/record_voice.py lines                          # game env: collect the lines
+    <Tools/Voice/kokoro>/.venv/Scripts/python tools/record_voice.py kokoro     # CPU: (re-)record every line
+    <Tools/Voice/qwen3tts>/.venv/Scripts/python tools/record_voice.py record   # GPU: the old VoiceDesign take
 
 Lines come from the training and held-out data (her own "line" field and what
 she says aloud) plus every line the trained model produced in testing. Output:
@@ -24,6 +28,7 @@ LINES = VOICE / "lines.json"
 WARM = ("A woman in her late twenties, Mexican-American, with a warm, slightly low voice. She is tired after "
         "a long night of work and talks quietly to herself, gentle and a little wry.")
 SEED, BATCH = 31, 8
+KOKORO_VOICE = "af_heart"
 
 
 def spoken(step):
@@ -86,5 +91,38 @@ def record():
     (VOICE / "tmp.wav").unlink(missing_ok=True)
 
 
+def encode(a, sr, name):
+    """Level to about -20 dBFS without clipping and write an Ogg Vorbis file."""
+    import numpy as np
+    import soundfile as sf
+    a = np.asarray(a, dtype=np.float32).reshape(-1)
+    rms = float(np.sqrt((a ** 2).mean())) or 1e-6
+    a = a * min(0.1 / rms, 0.95 / max(1e-6, float(np.abs(a).max())))
+    tmp = VOICE / "tmp.wav"
+    sf.write(tmp, a, sr)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(tmp), "-c:a", "libvorbis", "-q:a", "4",
+                    str(VOICE / name)], check=True)
+
+
+def kokoro():
+    """Every line in Kokoro's af_heart voice, into the same files the manifest already names."""
+    import numpy as np
+    from kokoro import KPipeline
+    lines = json.loads(LINES.read_text(encoding="utf-8"))
+    manifest_path = VOICE / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    pipe = KPipeline(lang_code="a")  # American English
+    start = time.time()
+    for n, text in enumerate(lines, 1):
+        chunks = [a.numpy() if hasattr(a, "numpy") else a for _, _, a in pipe(text, voice=KOKORO_VOICE)]
+        name = manifest.get(text) or f"{len(manifest) + 1:03d}.ogg"
+        encode(np.concatenate(chunks), 24000, name)
+        manifest[text] = name
+        if n % 20 == 0 or n == len(lines):
+            manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
+            print(f"{n}/{len(lines)} lines, {time.time() - start:.0f}s", flush=True)
+    (VOICE / "tmp.wav").unlink(missing_ok=True)
+
+
 if __name__ == "__main__":
-    {"lines": collect, "record": record}[sys.argv[1]]()
+    {"lines": collect, "record": record, "kokoro": kokoro}[sys.argv[1]]()

@@ -19,7 +19,7 @@ Hosted copy: with `MARYCEL_BACKEND=tinker` and `TINKER_API_KEY` set, the server 
 
 Sound: effects are synthesized in the browser (`game/web/sound.js`; try them at `/game/web/sound-test.html`). Music is generated offline with ACE-Step 1.5 (MIT code and weights) by `tools/make_music.py`, run with ACE-Step's own Python (installed separately, outside this repository): each room has its own theme (repair shop: ofrenda, electronics workshop: workshop, family home: home), the eerie passage music plays while the passage stirs in the room on screen, and morning plays over the endings. Each theme is a playlist of four one-minute takes in `game/web/audio/music/`; prompts and seeds are logged in `game/web/audio/takes/log.jsonl`, credits in `game/web/audio/CREDITS.md`.
 
-Marycel's voice is recorded ahead of play, not generated live: `tools/record_voice.py lines` collects every line she knows (from the training data and the trained model's test replies), and `tools/record_voice.py record`, run with a separate Qwen3-TTS environment (Apache-2.0), speaks them in one designed voice. Only the room on screen speaks; a line without a recording stays a subtitle.
+Marycel's voice is recorded ahead of play, not generated live: `tools/record_voice.py lines` collects every line she knows (from the training data and the trained model's test replies), and `tools/record_voice.py kokoro`, run with a separate Kokoro environment (Apache-2.0), speaks them all in one preset voice (af_heart), so every line sounds like the same person. Only the room on screen speaks; a line without a recording stays a subtitle.
 ## Character sprites
 
 `tools/build_character_sprites.py` turns the two Marycel character sheets (star sweater, green cardigan) into animation-ready sprites in `assets/sprites/marycel/`:
@@ -59,6 +59,6 @@ The code in this repository is MIT-licensed (see `LICENSE`). Everything it build
 
 - Marycel's model: Qwen3-8B (Apache-2.0) with a LoRA fine-tuned on Thinking Machines' Tinker; run locally with Ollama after conversion with llama.cpp (MIT).
 - Music: ACE-Step 1.5 (MIT code and weights), details in `game/web/audio/CREDITS.md`.
-- Marycel's voice: Qwen3-TTS 1.7B VoiceDesign (Apache-2.0), a designed voice, not a clone of anyone.
+- Marycel's voice: Kokoro 82M (Apache-2.0), preset voice af_heart, the same voice for every line; not a clone of anyone.
 - Title and morning screen backgrounds (`assets/screens/`): painted with OpenAI image generation, then prepared by `tools/build_screens.py`. The game draws the text, buttons and room snapshots on top.
 - Fonts: SIL Open Font License; license texts are in `game/web/fonts/`.
