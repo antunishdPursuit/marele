@@ -58,6 +58,8 @@ KEY_VALUE_URL = os.environ.get("KEY_VALUE_URL")                # a Key Value sto
 MAX_GAMES = int(os.environ.get("MAX_GAMES", "40"))             # nights kept in memory at once
 NEW_GAMES_PER_DAY = int(os.environ.get("NEW_GAMES_PER_DAY", "25"))  # per visitor address
 IDLE_SECONDS = 30 * 60                                          # a night nobody touches is dropped
+MAX_SILENCES = 3                                                # unanswered transfer questions before her night ends
+NIGHT_LOG = os.environ.get("NIGHT_LOG", "1") != "0"             # one JSON line per step, signal and ending
 WEB = ROOT / "game" / "web"
 ROOMS = md.ROOMS
 MAX_STEPS = 120          # a room's night ends after this many of Marycel's steps
@@ -137,8 +139,8 @@ def chat_tinker(messages) -> str:
 
 
 class Room:
-    def __init__(self, name: str, seed: int):
-        self.name = name
+    def __init__(self, name: str, seed: int, tag: str = ""):
+        self.name, self.tag = name, tag
         self.w = World(name)
         self.mem = md.Memory()
         self.rng = random.Random(seed)
@@ -146,6 +148,8 @@ class Room:
         self.steps = 0
         self.ended = False
         self.question = None      # what she typed when she asked about the transfer
+        self.heard = 0            # things that reached her since her last step
+        self.silences = 0         # transfer questions that went unanswered
         self.log: list[dict] = []  # what the player sees: her steps, lines and what reached her
 
     # ---------------- Marycel
@@ -154,10 +158,17 @@ class Room:
         with self.lock:
             if self.ended:
                 return {"ended": True}
-            # the client's answer clock ran out: she has waited, so she gets the same step and
-            # cue training gave her for silence, and consent becomes no_answer
-            if consent_expired and self.w.world["transfer_consent"] == "asked":
+            # the client's answer clock ran out and nothing reached her meanwhile: she has waited,
+            # so she gets the step and cue training gave her for silence, and consent becomes
+            # no_answer. If Elena sent anything, she steps on that instead. After MAX_SILENCES
+            # unanswered questions her night ends rather than asking again and again.
+            if consent_expired and self.w.world["transfer_consent"] == "asked" and not self.heard:
                 self.w.game_event("consent_timeout")
+                self.silences += 1
+                if self.silences >= MAX_SILENCES:
+                    self.ended = True
+                    night_log("ended", self, reason="no answer to her question", outcome=self.outcome())
+                    return {"ended": True}
                 waited = "You wait. Nothing appears on the screen."
                 self.mem.record({"action": "wait"}, waited)
                 self.mem.now = [waited]
@@ -197,18 +208,24 @@ class Room:
         self.mem.record(s, result)
         noticed = [] if refused else self._echo()
         self.mem.now = [result] + noticed + list(arrived)
+        self.heard = len(arrived)
         self.steps += 1
         action = md.ACTIONS.get(s.get("action"), {})
         entry = {"n": self.steps, "step": {k: v for k, v in s.items() if k != "line"}, "line": s.get("line", ""),
                  "result": result, "refused": refused, "noticed": noticed}
         self.log.append(entry)
-        recent = [e["step"].get("action") for e in self.log[-LOOP_WINDOW:] if "step" in e]
+        recent = [e["step"].get("action") for e in self.log if "step" in e][-LOOP_WINDOW:]  # her steps only
         if (w.world["transfer"] == "completed" or self.steps >= MAX_STEPS
                 # after a no, her note closes the night (as in training)
                 or (s.get("action") == "write_note" and not refused and w.world["transfer_consent"] == "declined")
                 # she is going round in circles
                 or (len(recent) == LOOP_WINDOW and len(set(recent)) <= 2)):
             self.ended = True
+        night_log("step", self, n=self.steps, action=s.get("action"), target=s.get("target"),
+                  text=s.get("text"), line=s.get("line", ""), refused=refused, result=result[:200],
+                  noticed=noticed, arrived=list(arrived), ended=self.ended)
+        if self.ended:
+            night_log("ended", self, outcome=self.outcome())
         return {**entry, "anim": action.get("anim", "idle"), "ms": action.get("ms", 600), "room": self.snapshot()}
 
     def _echo(self) -> list[str]:
@@ -249,8 +266,13 @@ class Room:
                 return {"status": "unavailable", "why": str(e)}
             texts = [p["text"] for p in w.perceived[before:] if p["from"] == "room"]
             self.mem.now += texts
+            self.heard += len(texts)
             route = w.author_log[-1]["route"] if w.author_log else None
             self.log.append({"elena": sid, "params": params, "noticed": texts, "route": route})
+            if sid == "transfer_response":
+                self.silences = 0  # an answer: "three unanswered" means three in a row
+            night_log("signal", self, signal=sid, params=params, noticed=bool(noticed), route=route,
+                      at=w.marycel["at"], seated=w.marycel["seated"])
             return {"status": "noticed" if noticed else ("sent" if route else "no_route"), "route": route}
 
     # ---------------- what the client draws
@@ -337,10 +359,22 @@ class Room:
         }
 
 
+def night_log(event: str, room: "Room", **fields):
+    """One JSON line per event on stdout (Render keeps it in the service log), so real nights
+    can be read back: her steps and lines, Elena's signals with their words, and endings."""
+    if NIGHT_LOG:
+        try:  # a log line must never break a step
+            print("NIGHT " + json.dumps({"night": room.tag, "room": room.name, "event": event, **fields},
+                                        default=str), flush=True)
+        except Exception:
+            pass
+
+
 class Game:
     def __init__(self, seed=None):
         seed = seed if seed is not None else random.randrange(1 << 30)
-        self.rooms = {name: Room(name, seed + i) for i, name in enumerate(ROOMS)}
+        tag = secrets.token_hex(3)  # names this night in the log; nothing about the visitor
+        self.rooms = {name: Room(name, seed + i, tag) for i, name in enumerate(ROOMS)}
         self.touched = time.time()
 
     def state(self):
@@ -354,6 +388,8 @@ class Game:
     def end(self):
         for r in self.rooms.values():
             with r.lock:
+                if not r.ended:
+                    night_log("ended", r, reason="the player ended the night", outcome=r.outcome())
                 r.ended = True
 
 
