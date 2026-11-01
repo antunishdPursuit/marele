@@ -150,6 +150,7 @@ class Room:
         self.question = None      # what she typed when she asked about the transfer
         self.heard = 0            # things that reached her since her last step
         self.silences = 0         # transfer questions that went unanswered
+        self.paused = False       # the player paused the night: a step that lands meanwhile never happens
         self.log: list[dict] = []  # what the player sees: her steps, lines and what reached her
 
     # ---------------- Marycel
@@ -158,6 +159,7 @@ class Room:
         with self.lock:
             if self.ended:
                 return {"ended": True}
+            self.paused = False  # she is only asked for a step while the night runs
             # the client's answer clock ran out and nothing reached her meanwhile: she has waited,
             # so she gets the step and cue training gave her for silence, and consent becomes
             # no_answer. If Elena sent anything, she steps on that instead. After MAX_SILENCES
@@ -179,6 +181,8 @@ class Room:
         with self.lock:
             if self.ended:  # the night was ended while she was thinking: her step never happens
                 return {"ended": True}
+            if self.paused:  # paused while she was thinking: nothing happens; she steps again after Resume
+                return {"held": True}
             return self._apply(parse(reply), reply, self.mem.now[shown:])
 
     def _apply(self, s, reply, arrived=()) -> dict:
@@ -289,7 +293,8 @@ class Room:
             key = "recording_survives"
         else:
             key = "unresolved"
-        return {"key": key, "video": world["video_copy"], "passage": world["passage"],
+        return {"key": key, "echo": bool(sum(w.outputs["echo"].values())),  # did the Echo ever make a sound
+                "video": world["video_copy"], "passage": world["passage"],
                 "stream": world["selected_stream"], "elena_stream": self.w.room["hidden"]["elena_stream"],
                 "consent": world["transfer_consent"], "steps": self.steps}
 
@@ -388,6 +393,10 @@ class Game:
                 "phrases": {"screen": md.ELENA_SCREEN, "answers": md.ELENA_ANSWERS, "notes": md.ELENA_NOTES,
                             "prints": md.ELENA_PRINTS},
                 "files": [{"id": f["id"], "name": f["name"]} for f in observe.CONTENT["machine"]["files"]]}
+
+    def pause(self, on: bool):
+        for r in self.rooms.values():
+            r.paused = on
 
     def end(self):
         for r in self.rooms.values():
@@ -545,6 +554,9 @@ class Handler(SimpleHTTPRequestHandler):
                 sid, params = body["signal"], body.get("params") or {}
                 results = {name: r.signal(sid, params) for name, r in game.rooms.items()}
                 return self._json({"results": results, "rooms": [r.snapshot() for r in game.rooms.values()]})
+            if self.path == "/api/pause":
+                game.pause(bool(body.get("paused")))
+                return self._json({"paused": bool(body.get("paused"))})
             if self.path == "/api/end":
                 game.end()
                 return self._json(game.state())

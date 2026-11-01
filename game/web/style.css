@@ -57,7 +57,8 @@ input, select { background: #0b0e0c; border: 2px solid var(--line); padding: 1px
 .facts { color: var(--dim); }
 /* A device's menu opens in the room, next to the device; only that device's card shows. */
 .device-menu { position: absolute; z-index: 5; width: min(330px, 94%); background: var(--panel); border: 2px solid var(--warn);
-               padding: 4px 8px 8px; box-shadow: 0 0 0 3px #000, 0 8px 24px rgba(0, 0, 0, .6); }
+               padding: 4px 8px 8px; box-shadow: 0 0 0 3px #000, 0 8px 24px rgba(0, 0, 0, .6);
+               max-height: calc(100% - 8px); overflow: auto; }
 .device-menu[hidden] { display: none; }
 .menu-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--warn); }
 .close-menu { width: 30px; height: 28px; padding: 0; }
@@ -173,6 +174,8 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 .dialog::backdrop { background: rgba(7, 5, 10, .75); }
 .dialog > h2 { font-family: "Jacquard 24", serif; font-weight: 400; font-size: 48px; line-height: 1; color: var(--warn); margin: 0 48px 12px 0; }
 .dialog p { margin: 8px 0; }
+.tips { margin: 0 0 8px; padding-left: 20px; }
+.tips li { margin: 5px 0; font-size: 15px; }
 .dialog a { color: var(--phosphor); }
 /* the X stays in reach while a long window scrolls */
 .dialog .close { position: sticky; top: 0; float: right; margin: -10px -14px 0 8px; width: 40px; height: 40px; padding: 0; font-size: 20px; z-index: 1; }

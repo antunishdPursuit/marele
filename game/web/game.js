@@ -548,6 +548,7 @@ async function stepRoom(id, gen) {
     setStatus(e.message, true);
     return false;
   }
+  if (res.held) return true;  // paused while she was thinking: the step never happened
   // a step that lands while paused waits for play; after End it is not shown
   while (S.paused && !S.over && gen === S.generation) await sleep(200);
   if (gen !== S.generation || S.over) return true;
@@ -938,8 +939,9 @@ function updateSignalLocks() {
   // Printer: a dim preview until it works
   const printOk = canSend("print_message");
   box.querySelector('[data-card="printer"]').classList.toggle("locked", !printOk);
-  $("printer-line").textContent = printOk ? "She reads it when she picks up the printout." :
-    S.ever.has("print_message") ? "Not ready right now." : "Not working yet.";
+  $("printer-line").textContent = printOk ? "It prints in her room. She has to pick it up and read it." :
+    S.ever.has("print_message") ? "Not ready right now." :
+    "Not working yet. It opens once she switches printing on at the computer, with the printer connected and loaded.";
 
   renderChips();
 
@@ -1232,6 +1234,7 @@ const ENDINGS = {
   bridge: ["The bridge", "Marycel saved the family video and moved Elena's own voice to the new drive, after Elena said yes."],
   half_bridge: ["Half a bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes. The family video was never saved."],
   wrong_voice: ["The wrong voice", "The voice she moved was not Elena's. Something else got out of the machine."],
+  wrong_voice_quiet: ["The wrong voice", "The voice she moved was not Elena's. Elena's own voice is still inside the old computer."],
   promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut."],
   recording_survives: ["The recording survives", "The family video is safe. Elena's voice is still inside the old computer."],
   unresolved: ["Unresolved", "The night ended before any voice was moved or the video was saved."],
@@ -1262,7 +1265,9 @@ async function showEnding() {
   for (const r of rooms) {
     const o = r.outcome || { key: "unresolved", video: r.world.video_copy, passage: r.world.passage,
                              stream: r.world.selected_stream, consent: r.world.transfer_consent, steps: r.steps };
-    const [name, text] = ENDINGS[o.key === "unresolved" && o.steps < TOO_EARLY_STEPS ? "too_early" : o.key];
+    // "something else got out" only if the Echo ever made a sound in that room
+    const [name, text] = ENDINGS[o.key === "unresolved" && o.steps < TOO_EARLY_STEPS ? "too_early" :
+                                 o.key === "wrong_voice" && !o.echo ? "wrong_voice_quiet" : o.key];
     const div = document.createElement("div");
     div.className = "outcome";
     const voice = (v) => `voice ${String(v || "?").replace("stream_", "").toUpperCase()}`;
@@ -1355,7 +1360,7 @@ async function init() {
     $("story").showModal();
   });
   const soundButton = $("sound");
-  const showSound = () => { soundButton.textContent = soundOn ? "Sound on" : "Sound off"; soundButton.setAttribute("aria-pressed", String(soundOn)); };
+  const showSound = () => { soundButton.textContent = soundOn ? "Sound: on" : "Sound: off"; soundButton.setAttribute("aria-pressed", String(soundOn)); };
   showSound();
   soundButton.addEventListener("click", () => {
     soundOn = !soundOn;
@@ -1441,6 +1446,8 @@ function setPaused(on) {
   }
   if (Voice.current) on ? Voice.current.pause() : Voice.current.play().catch(() => {});
   S.paused = on;
+  // and the server drops a step she was still thinking about, so nothing happens unseen
+  if (S.started && !S.over) api("/api/pause", { paused: on }).catch(() => {});
   showPause();
   setStatus();
 }

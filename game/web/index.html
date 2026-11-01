@@ -92,17 +92,26 @@
 <dialog id="how-dialog" class="dialog" aria-labelledby="how-title">
   <button class="close" type="button" aria-label="Close">X</button>
   <h2 id="how-title">How to play</h2>
+  <p><b>Your goal:</b> you are Tía Elena, trapped in the old family computer. Help Marycel save the family video, then let her move <i>your</i> voice, not the Echo's, out to the new drive. If you aren't sure she has your voice, don't say Yes.</p>
   <ol class="steps">
     <li><span class="icon" aria-hidden="true"></span><b>Watch</b>
-      <p>Marycel works in three rooms at once. Click a small room picture to watch that room.</p></li>
+      <p>Marycel works in three rooms at once: three versions of the same night. One room shows large; click a small room picture to switch. A picture's badge says when that room has unread steps, needs your reply, or its night is over.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Send a signal</b>
-      <p>You are Elena. Pick a signal from Elena's signals. Every room gets it, but each Marycel notices it only if she can see or hear it. You choose from the words and notes she knows; she can't hold a conversation. Only the computer, speakers and printer respond to clicks: they're how you reach her, and a click opens their menu of signals.</p></li>
+      <p>Click the computer, speakers or printer in the room (or the buttons under it) and pick a word or note she knows from its menu; you can't type freely. A signal goes to every room where that device works (the menu says which), but each Marycel notices only what she can see or hear.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Answer her</b>
-      <p>She finds two voices on the old drive. Before moving one, she asks you: answer <b>Yes</b>, <b>No</b>, <b>Danger</b> or <b>More tests</b> (the buttons) within about 45 seconds. Your answer reaches every room that asked. If she asks three times with no answer, that room's night ends.</p></li>
+      <p>She finds two voices on the old drive and asks before moving one. Answer in the computer's menu within 45 seconds: <b>Yes</b> (move it), <b>No</b> (leave me here), <b>Danger</b> (it isn't safe) or <b>More tests</b> (check first). One answer reaches every room that asked. Three unanswered in a row end that room's night.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Mind the Echo</b>
-      <p>Something else is in there with you. It can only repeat sounds Marycel has already played out loud.</p></li>
+      <p>Something else is in there: the Echo. It can only repeat words from the damaged part of the old recording, once Marycel opens that part, as a quiet voice through the speakers or headphones. Don't let her move its voice.</p></li>
   </ol>
-  <p><b>Pause</b> stops the night. <b>End the night</b> shows how each room turned out.</p>
+  <ul class="tips">
+    <li><b>Which voice is yours?</b> When she compares the two voices, What happened (right) shows each one's history: yours began at the held PAUSE and carried the signals you sent; the Echo's began inside the video's damaged tail.</li>
+    <li><b>She may test you.</b> If she types a question, such as who you are or what you showed her, the computer's menu offers the words she knows. Pick the one only Elena would say.</li>
+    <li><b>More signals open as she works:</b> pointing to a file once she opens the files, pieces of the old recording once she plays it, longer notes once she runs diagnostics, and printing once she switches it on at the computer.</li>
+    <li><b>Noticed:</b> the side panel says how many rooms noticed a signal at once. A printout or a note can still be found later.</li>
+    <li><b>A room's night ends</b> when a voice is moved, when she leaves you a note after your No, after three unanswered questions, when she goes round in circles, or after 120 steps. The other rooms go on.</li>
+    <li><b>Pause</b> freezes all three rooms, her voice and her question's clock (opening How to play pauses too). <b>End the night</b>, in the gear menu, ends every room now.</li>
+    <li><b>Endings:</b> The bridge (video saved, your voice moved) · Half a bridge (your voice moved, video not saved) · The wrong voice · The promise (you said No) · The recording survives (video saved, nobody moved) · Unresolved.</li>
+  </ul>
   <p class="dim">Made for the Hacktoberfest 2026 "Ghost in the Machine" challenge. Marycel is a small open model (Qwen3-8B) fine-tuned for this game, and the game's rules check every step she takes. A cookie links this page to your night (reloading starts a new one) and your browser remembers the sound setting. The server keeps an anonymous log of each night (Marycel's steps and the signals sent) to improve the game.
     <a href="https://github.com/antunishdPursuit/marele" target="_blank" rel="noopener">Source code on GitHub (MIT)</a></p>
 </dialog>
