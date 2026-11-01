@@ -55,6 +55,19 @@ input, select { background: #0b0e0c; border: 2px solid var(--line); padding: 1px
 
 .room-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .facts { color: var(--dim); }
+/* A device's menu opens in the room, next to the device; only that device's card shows. */
+.device-menu { position: absolute; z-index: 5; width: min(330px, 94%); background: var(--panel); border: 2px solid var(--warn);
+               padding: 4px 8px 8px; box-shadow: 0 0 0 3px #000, 0 8px 24px rgba(0, 0, 0, .6); }
+.device-menu[hidden] { display: none; }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--warn); }
+.close-menu { width: 30px; height: 28px; padding: 0; }
+.device-menu .sig-card { display: none; margin: 4px 0 0; }
+.device-menu[data-card="screen"] .sig-card[data-card="screen"],
+.device-menu[data-card="sound"] .sig-card[data-card="sound"],
+.device-menu[data-card="printer"] .sig-card[data-card="printer"] { display: block; }
+.devices { display: flex; gap: 8px; justify-content: center; margin: 6px 0 0; }
+.devices button { min-width: 96px; }
+.devices button.fresh { border-color: var(--warn); color: var(--warn); }
 .view-wrap { position: relative; width: min(100%, max(560px, (100vh - 330px) * 640 / 224)); margin: 0 auto; }
 canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; background: #000; }
 #view { border: 2px solid var(--line); width: 100%; height: auto; }

@@ -588,6 +588,7 @@ function buildPreviews() {
 }
 
 function setActive(id) {
+  closeDevice();
   S.active = id;
   S.hover = null;
   S.rt[id].alert = false;
@@ -686,17 +687,41 @@ function hitTest(id, x, y) {
 const CARD_FOR = { computer: "screen", keyboard: "screen", desk: "screen", speakers: "sound",
                    printer: "printer", printer_table: "printer" };
 
+const MENU_TITLES = { screen: "Computer: what appears on her screen", sound: "Speakers", printer: "Printer" };
+const DEVICE_KIND = { screen: "computer", sound: "speakers", printer: "printer" };
+
 function onRoomClick(e) {
   onHover(e);
   const h = S.hover;
-  if (!h) return;
-  const card = CARD_FOR[h.kind] && $("signals").querySelector(`[data-card="${CARD_FOR[h.kind]}"]`);
-  if (!card) return;  // only the computer, speakers and printer respond to a click
-  card.classList.add("fresh");
-  setTimeout(() => card.classList.remove("fresh"), 2500);
-  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  const first = card.querySelector("button:not(:disabled), select:not(:disabled)");
-  if (first) first.focus({ preventScroll: true });
+  if (!h || !CARD_FOR[h.kind]) return;  // only the computer, speakers and printer respond to a click
+  const rect = $("view").getBoundingClientRect();
+  openDevice(CARD_FOR[h.kind], e.clientX - rect.left, e.clientY - rect.top);
+}
+
+// A device's menu opens next to it in the room: the computer's words and notes, the speakers'
+// sounds, or the printer's notes. Without a point (the buttons under the room), it opens by the
+// device itself, or at the top of the view if the device is out of sight.
+function openDevice(card, px, py) {
+  const menu = $("device-menu"), wrap = menu.parentElement.getBoundingClientRect();
+  if (px == null) {
+    const o = S.active && S.rooms[S.active].objects.find((x) => x.kind === DEVICE_KIND[card]);
+    const k = wrap.width / VIEW_W, cx = o ? ((o.bounds[0] + o.bounds[2]) / 2 - camFor(S.active)) * k : -1;
+    [px, py] = cx >= 0 && cx <= wrap.width ? [cx, o.bounds[1] * k] : [wrap.width - 170, 20];
+  }
+  menu.dataset.card = card;
+  $("menu-title").textContent = MENU_TITLES[card];
+  $("tip").hidden = true;
+  menu.hidden = false;
+  updateSignalLocks();
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = `${Math.max(4, Math.min(px - w / 2, wrap.width - w - 4))}px`;
+  menu.style.top = `${py - h - 12 >= 0 ? py - h - 12 : Math.min(py + 16, Math.max(4, wrap.height - h))}px`;
+  const first = menu.querySelector(`.sig-card[data-card="${card}"] button:not(:disabled), .sig-card[data-card="${card}"] select:not(:disabled)`);
+  (first || menu.querySelector(".close-menu")).focus({ preventScroll: true });
+}
+
+function closeDevice() {
+  $("device-menu").hidden = true;
 }
 
 function onHover(e) {
@@ -807,7 +832,6 @@ function icon(name) {
 function buildSignals() {
   const box = $("signals");
   box.innerHTML = `
-    <div id="typed" class="typed" role="status" hidden></div>
     <div class="sig-card" data-card="screen">
       <div class="card-head">${icon("screen")}<h3>Screen</h3></div>
       <p class="card-line" id="screen-line"></p>
@@ -868,9 +892,11 @@ function checkUnlocks(id, quiet) {
     S.ever.add(sid);
     if (quiet || !UNLOCK_WORDS[sid]) continue;
     notice(`${S.rooms[id].label}: ${UNLOCK_WORDS[sid]}`);
-    const card = $("signals").querySelector(`[data-card="${UNLOCK_CARD[sid]}"]`);
-    card.classList.add("fresh");
-    setTimeout(() => card.classList.remove("fresh"), 6000);
+    for (const el of [$("signals").querySelector(`[data-card="${UNLOCK_CARD[sid]}"]`),
+                      $("devices").querySelector(`[data-card="${UNLOCK_CARD[sid]}"]`)]) {
+      el.classList.add("fresh");
+      setTimeout(() => el.classList.remove("fresh"), 6000);
+    }
   }
 }
 
@@ -914,9 +940,9 @@ function updateSignalLocks() {
   typed.hidden = !waiting.length && !asking.length;
   typed.textContent = asking.length
     ? asking.map((id) => `${S.rooms[id].label} asks: "${S.rooms[id].question}" (${secondsLeft(id)} s)`).join(" ") +
-      " Answer with YES, NO, DANGER or MORE TESTS on the Screen card. One answer reaches every room that asked."
+      " Click the computer to answer YES, NO, DANGER or MORE TESTS. One answer reaches every room that asked."
     : waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
-      (waiting.length ? " Answer with one of the words on the Screen card." : "");
+      (waiting.length ? " Click the computer to answer with a word she knows." : "");
 }
 setInterval(() => { if (S.started && !S.over && S.order.some((id) => S.rooms[id].question)) updateSignalLocks(); }, 1000);
 
@@ -1213,6 +1239,7 @@ const CONSENT_WORDS = { none: "she never asked you", asked: "her last question w
 
 async function showEnding() {
   if (S.over) return;
+  closeDevice();
   S.over = true;
   setStatus();
   let rooms = S.order.map((id) => S.rooms[id]);
@@ -1275,6 +1302,12 @@ async function init() {
   setupDialogs();
   $("view").addEventListener("mousemove", onHover);
   $("view").addEventListener("click", onRoomClick);
+  for (const b of $("devices").querySelectorAll("button")) b.addEventListener("click", () => openDevice(b.dataset.card));
+  $("device-menu").querySelector(".close-menu").addEventListener("click", closeDevice);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("device-menu").hidden) closeDevice(); });
+  document.addEventListener("mousedown", (e) => {  // a click anywhere else closes the menu
+    if (!$("device-menu").hidden && !e.target.closest("#device-menu, #view, #devices")) closeDevice();
+  });
   $("view").addEventListener("mouseleave", () => { S.hover = null; $("tip").hidden = true; });
   $("pause").addEventListener("click", () => setPaused(!S.paused));
   // menu items close the menu once chosen
@@ -1339,6 +1372,7 @@ async function init() {
 // back to the title screen with a new night ready.
 async function nightLost() {
   if (S.lost) return;
+  closeDevice();
   S.lost = true;
   S.generation++;  // stops this night's rounds
   S.started = false;

@@ -40,6 +40,15 @@
       <canvas id="view" width="640" height="224" aria-label="Active room"></canvas>
       <div id="tip" class="tip" hidden></div>
       <div id="banner" class="banner" aria-live="polite" tabindex="-1" hidden></div>
+      <div id="device-menu" class="device-menu" role="dialog" aria-labelledby="menu-title" hidden>
+        <div class="menu-head"><b id="menu-title"></b><button type="button" class="close-menu" aria-label="Close">X</button></div>
+        <div id="signals"></div>
+      </div>
+    </div>
+    <div class="devices" id="devices" aria-label="Reach her through">
+      <button type="button" data-card="screen">Computer</button>
+      <button type="button" data-card="sound">Speakers</button>
+      <button type="button" data-card="printer">Printer</button>
     </div>
     <p id="subtitle" class="subtitle" aria-live="polite"></p>
     <p id="notice" class="notice" role="status"></p>
@@ -47,9 +56,9 @@
   </section>
 
   <aside class="panel" aria-label="Elena">
-    <h2>Elena's signals</h2>
-    <p class="hint">One signal reaches all three rooms. Each Marycel notices it only if she can see or hear it from where she is.</p>
-    <div id="signals"></div>
+    <h2>Reaching her</h2>
+    <p class="hint">Click the computer, speakers or printer in the room (or the buttons under it) to choose a signal. One signal reaches all three rooms; each Marycel notices it only if she can see or hear it from where she is.</p>
+    <div id="typed" class="typed" role="status" hidden></div>
     <div id="feedback" class="feedback" aria-live="polite"></div>
     <h2>What happened <span id="log-room" class="dim"></span></h2>
     <ol id="log" class="log"></ol>
@@ -87,7 +96,7 @@
     <li><span class="icon" aria-hidden="true"></span><b>Watch</b>
       <p>Marycel works in three rooms at once. Click a small room picture to watch that room.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Send a signal</b>
-      <p>You are Elena. Pick a signal from Elena's signals. Every room gets it, but each Marycel notices it only if she can see or hear it. You choose from the words and notes she knows; she can't hold a conversation. Only the computer, speakers and printer respond to clicks: they're how you reach her, and a click jumps to their signals.</p></li>
+      <p>You are Elena. Pick a signal from Elena's signals. Every room gets it, but each Marycel notices it only if she can see or hear it. You choose from the words and notes she knows; she can't hold a conversation. Only the computer, speakers and printer respond to clicks: they're how you reach her, and a click opens their menu of signals.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Answer her</b>
       <p>She finds two voices on the old drive. Before moving one, she asks you: answer <b>Yes</b>, <b>No</b>, <b>Danger</b> or <b>More tests</b> (the buttons) within about 45 seconds. Your answer reaches every room that asked. If she asks three times with no answer, that room's night ends.</p></li>
     <li><span class="icon" aria-hidden="true"></span><b>Mind the Echo</b>
