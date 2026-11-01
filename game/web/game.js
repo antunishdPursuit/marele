@@ -83,6 +83,7 @@ function resetRooms(state) {
   setRooms(state.rooms);
   S.active = S.order[0];
   S.signals = state.signals; S.files = state.files; S.fragments = state.fragments;
+  S.phrases = state.phrases || { screen: [], answers: [], notes: [], prints: [] };
   buildPreviews();
   buildSignals();
   renderPanel();
@@ -511,7 +512,7 @@ function showLine(id, res) {
 // until all of them have finished theirs (and the room on screen has finished speaking).
 async function runRounds(gen) {
   while (gen === S.generation) {
-    if (!S.started || S.paused || S.over || typingHold()) { await sleep(300); continue; }
+    if (!S.started || S.paused || S.over) { await sleep(300); continue; }
     const ready = S.order.filter((id) => !S.rooms[id].ended && !waitingForElena(id));
     if (!ready.length) { await sleep(300); continue; }
     const ok = await Promise.all(ready.map((id) => stepRoom(id, gen)));
@@ -521,13 +522,6 @@ async function runRounds(gen) {
     while (Voice.current && performance.now() < until && gen === S.generation) await sleep(150);
     await sleep(ROUND_GAP_MS);
   }
-}
-
-// While Elena is typing a message, Marycel waits for it (up to TYPING_HOLD_MS after the last key).
-const TYPING_HOLD_MS = 20000;
-function typingHold() {
-  const box = document.getElementById("screen-text");
-  return !!box && box.value.trim() !== "" && performance.now() - (S.typingAt || 0) < TYPING_HOLD_MS;
 }
 
 // After she asks about the transfer, her room sits out the rounds until Elena answers or time runs out.
@@ -693,6 +687,25 @@ function hitTest(id, x, y) {
   return null;
 }
 
+const CARD_FOR = { computer: "screen", keyboard: "screen", desk: "screen", speakers: "sound",
+                   printer: "printer", printer_table: "printer" };
+
+function onRoomClick(e) {
+  onHover(e);
+  const h = S.hover;
+  if (!h) return;
+  const card = CARD_FOR[h.kind] && $("signals").querySelector(`[data-card="${CARD_FOR[h.kind]}"]`);
+  if (!card) {
+    notice(`${h.text}. Only Marycel can touch it; you can reach her through the computer, speakers and printer.`);
+    return;
+  }
+  card.classList.add("fresh");
+  setTimeout(() => card.classList.remove("fresh"), 2500);
+  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  const first = card.querySelector("button:not(:disabled), select:not(:disabled)");
+  if (first) first.focus({ preventScroll: true });
+}
+
 function onHover(e) {
   if (!S.active) return;
   const rect = $("view").getBoundingClientRect();
@@ -700,6 +713,7 @@ function onHover(e) {
   const x = (e.clientX - rect.left) / k + camFor(S.active);
   const y = (e.clientY - rect.top) / k;
   S.hover = hitTest(S.active, x, y);
+  $("view").style.cursor = S.hover ? "pointer" : "default";
   const tip = $("tip");
   if (!S.hover) { tip.hidden = true; return; }
   tip.hidden = false;
@@ -724,28 +738,31 @@ const UNLOCK_WORDS = {
 const UNLOCK_CARD = { long_note: "screen", highlight_file: "screen", request_pause: "screen",
                       play_fragment: "sound", print_message: "printer" };
 const TYPED_STEPS = 3;  // her typed question waits this many of her steps for an answer
-const ANSWER_WORDS = { YES: "agreed", NO: "declined", DANGER: "warned", "MORE TESTS": "more_tests", "MORE TEST": "more_tests" };
-// The words she was trained on: greetings and warnings, and answers to her questions.
-const KNOWN_WORDS = ["HELLO MARY", "IT'S ME", "TIA ELENA", "COPY FIRST", "DON'T RESET", "WAIT", "HELP"];
-const ANSWER_CHIPS = ["THE FLOWER", "FOLD IT BACK", "TORN PETAL", "I'M INSIDE", "IT'S ELENA"];
+// Elena says only what Marycel was trained on (the server sends the lists), so every word is
+// one she can react to. While she asks about the transfer: the four answers. After she types a
+// question: the answers she knows. Otherwise: the short screen messages she knows.
+const ANSWERS = [["YES", "agreed"], ["NO", "declined"], ["DANGER", "warned"], ["MORE TESTS", "more_tests"]];
 
 function renderChips() {
   const box = $("chips");
   if (!box) return;
   const asking = S.order.some((id) => S.rooms[id].question && !S.rooms[id].ended);
-  const words = asking ? ["YES", "NO", "DANGER", "MORE TESTS"] : typedWaiting().length ? ANSWER_CHIPS : KNOWN_WORDS;
-  const key = words.join("|");
+  const mode = asking ? "answer" : typedWaiting().length ? "reply" : "say";
+  const words = mode === "answer" ? ANSWERS : (mode === "reply" ? S.phrases.answers : S.phrases.screen).map((w) => [w, w]);
+  const key = mode + words.map((w) => w[0]).join("|");
   if (box.dataset.key !== key) {
     box.dataset.key = key;
     box.innerHTML = "";
-    for (const w of words) {
+    const sid = mode === "answer" ? "transfer_response" : mode === "reply" ? "answer_typed" : "screen_message";
+    for (const [label, value] of words) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip";
-      b.textContent = w;
-      b.addEventListener("click", () => {
-        $("screen-text").value = w;
-        $("screen-text").closest("form").requestSubmit();
+      b.textContent = label;
+      b.addEventListener("click", async () => {
+        const reached = await sendSignal(sigById(sid), { name: sid === "transfer_response" ? "choice" : "text", value });
+        if (reached && sid === "answer_typed") for (const id of reached) S.rt[id].typed = null;
+        updateSignalLocks();
       });
       box.append(b);
     }
@@ -794,15 +811,14 @@ function buildSignals() {
   const box = $("signals");
   box.innerHTML = `
     <div id="typed" class="typed" role="status" hidden></div>
-    <form class="sig-card" data-card="screen">
+    <div class="sig-card" data-card="screen">
       <div class="card-head">${icon("screen")}<h3>Screen</h3></div>
       <p class="card-line" id="screen-line"></p>
-      <div class="sig-row">
-        <input id="screen-text" name="text" autocomplete="off" aria-label="Message for the screen">
-        <button type="submit">Send</button>
-      </div>
-      <p class="card-sub" id="screen-count"></p>
       <div class="chips" id="chips" aria-label="Words she knows"></div>
+      <div class="sig-row" data-show="long_note">
+        <select id="note-choice" aria-label="Note for the screen"></select>
+        <button type="button" data-send="long_note">Write this note</button>
+      </div>
       <div class="sig-row" data-show="highlight_file">
         <select id="file-choice" aria-label="File to point to"></select>
         <button type="button" data-send="highlight_file">Point to this file</button>
@@ -811,7 +827,7 @@ function buildSignals() {
         <button type="button" data-send="request_pause">Ask her to halt the recovery</button>
         <span class="card-sub">Flashes PAUSE on the screen. She decides.</span>
       </div>
-    </form>
+    </div>
     <div class="sig-card" data-card="sound">
       <div class="card-head">${icon("sound")}<h3>Sound</h3></div>
       <p class="card-line">She hears it through the speakers, or the headphones if she's wearing them.</p>
@@ -822,59 +838,26 @@ function buildSignals() {
       </div>
       <p class="card-sub" id="sound-off">The speakers are unplugged or muted.</p>
     </div>
-    <form class="sig-card" data-card="printer">
+    <div class="sig-card" data-card="printer">
       <div class="card-head">${icon("printer")}<h3>Printer</h3></div>
       <p class="card-line" id="printer-line"></p>
       <div class="sig-row" data-show="print_message">
-        <input id="print-text" name="text" autocomplete="off" aria-label="Note to print">
-        <button type="submit">Print</button>
+        <select id="print-choice" aria-label="Note to print"></select>
+        <button type="button" data-send="print_message">Print</button>
       </div>
-    </form>`;
+    </div>`;
   for (const [sel, sid] of [["file-choice", "highlight_file"], ["fragment-choice", "play_fragment"]]) {
     for (const c of sigById(sid).choices) $(sel).add(new Option(choiceLabel(sid, c), c));
   }
-  $("print-text").maxLength = sigById("print_message").max_chars;
-  const screenText = $("screen-text");
-  screenText.addEventListener("input", () => {
-    S.typingAt = performance.now();
-    updateSignalLocks();
-  });
-  box.querySelector('[data-card="screen"]').addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const v = screenText.value.trim(), short = sigById("screen_message").max_chars;
-    if (!v) { notice("Type a few letters first."); screenText.focus(); return; }
-    // while she is asking about the transfer, a typed answer word is that answer
-    const words = v.toUpperCase().replace(/[^A-Z ]/g, " ").trim().split(/\s+/);
-    const answer = words.join(" ").startsWith("MORE TEST") ? "more_tests" : ANSWER_WORDS[words[0]];
-    if (answer && S.order.some((id) => S.rooms[id].question && !S.rooms[id].ended)) {
-      if (await sendSignal(sigById("transfer_response"), { name: "choice", value: answer })) screenText.value = "";
-      updateSignalLocks();
-      return;
-    }
-    if (v.length > short && !canSend("long_note")) {
-      notice(`The screen can only show ${short} letters right now.`);
-      screenText.focus();
-      return;
-    }
-    // one box: a long message is a note, a short one answers her if she typed, else a message
-    const sid = v.length > short ? "long_note" : typedWaiting().length ? "answer_typed" : "screen_message";
-    const reached = await sendSignal(sigById(sid), { name: "text", value: sid === "long_note" ? v : v.toUpperCase() });
-    if (reached) {
-      screenText.value = "";
-      for (const id of reached) S.rt[id].typed = null;
-      updateSignalLocks();
-    }
-  });
-  box.querySelector('[data-card="printer"]').addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const input = $("print-text"), v = input.value.trim();
-    if (!v) { notice("Type a few words first."); input.focus(); return; }
-    if (await sendSignal(sigById("print_message"), { name: "text", value: v })) input.value = "";
-  });
-  const choice = { highlight_file: "file-choice", play_fragment: "fragment-choice" };
+  for (const [sel, list] of [["note-choice", S.phrases.notes], ["print-choice", S.phrases.prints]]) {
+    for (const t of list) $(sel).add(new Option(t, t));
+  }
+  // each button sends its signal with what its list is set to
+  const choice = { highlight_file: ["file-choice", "choice"], play_fragment: ["fragment-choice", "choice"],
+                   long_note: ["note-choice", "text"], print_message: ["print-choice", "text"] };
   for (const b of box.querySelectorAll("[data-send]")) {
-    const sid = b.dataset.send;
-    b.addEventListener("click", () => sendSignal(sigById(sid), choice[sid] ? { name: "choice", value: $(choice[sid]).value } : null));
+    const sid = b.dataset.send, c = choice[sid];
+    b.addEventListener("click", () => sendSignal(sigById(sid), c ? { name: c[1], value: $(c[0]).value } : null));
   }
   updateSignalLocks();
 }
@@ -909,21 +892,9 @@ function updateSignalLocks() {
     where.textContent = rooms.length && rooms.length < open.length ? `Works in: ${rooms.map((id) => S.rooms[id].label).join(", ")}` : "";
   }
 
-  // Screen: one box, a few letters until diagnostics repair it
-  const screenOk = canSend("screen_message"), long = canSend("long_note");
-  const input = $("screen-text"), max = sigById(long ? "long_note" : "screen_message").max_chars;
-  input.maxLength = max;
-  input.placeholder = `type up to ${max} letters`;
-  input.disabled = input.nextElementSibling.disabled = !live || !screenOk;
-  const longIn = open.filter((id) => (S.rooms[id].signals_now || {}).long_note);
-  $("screen-line").textContent = !screenOk ? "The computer is off." :
-    (!long ? "The screen is damaged: a few letters only." : longIn.length < open.length
-      ? `Longer notes work in: ${longIn.map((id) => S.rooms[id].label).join(", ")}; elsewhere a few letters.`
-      : "Repaired: longer notes work now.") +
-    " She knows the words below best; she can't hold a conversation.";
-  $("screen-count").textContent = `${input.value.length} / ${max}`;
-  $("screen-count").classList.toggle("bad", input.value.length > max);
-  input.classList.toggle("shout", !long);
+  // Screen: her trained words as buttons; longer notes once diagnostics repair it
+  $("screen-line").textContent = !canSend("screen_message") ? "The computer is off." :
+    "Choose what appears on her screen. These are the words she knows; she can't hold a conversation.";
 
   // Sound: in each room the crackle gives way to the recording once she has played it
   const tone = box.querySelector('[data-show="tone"]'), frag = box.querySelector('[data-show="play_fragment"]');
@@ -946,9 +917,9 @@ function updateSignalLocks() {
   typed.hidden = !waiting.length && !asking.length;
   typed.textContent = asking.length
     ? asking.map((id) => `${S.rooms[id].label} asks: "${S.rooms[id].question}" (${secondsLeft(id)} s)`).join(" ") +
-      " Answer with YES, NO, DANGER or MORE TESTS below the box. One answer reaches every room that asked."
+      " Answer with YES, NO, DANGER or MORE TESTS on the Screen card. One answer reaches every room that asked."
     : waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
-      (waiting.length ? " Answer with one of the words below the box." : "");
+      (waiting.length ? " Answer with one of the words on the Screen card." : "");
 }
 setInterval(() => { if (S.started && !S.over && S.order.some((id) => S.rooms[id].question)) updateSignalLocks(); }, 1000);
 
@@ -1306,6 +1277,7 @@ async function newGame() {
 async function init() {
   setupDialogs();
   $("view").addEventListener("mousemove", onHover);
+  $("view").addEventListener("click", onRoomClick);
   $("view").addEventListener("mouseleave", () => { S.hover = null; $("tip").hidden = true; });
   $("pause").addEventListener("click", () => setPaused(!S.paused));
   // menu items close the menu once chosen

@@ -383,6 +383,9 @@ class Game:
                              "params": list(s.get("params", {})), "choices": s.get("choices"),
                              "max_chars": s.get("max_chars"), "stage": s.get("stage")} for s in CATALOG["signals"]],
                 "fragments": [{"id": f["id"], "label": f.get("label", f["id"])} for f in observe.CONTENT["machine"]["fragments"]],
+                # what Elena can say: only the words and notes Marycel was trained on (no free typing)
+                "phrases": {"screen": md.ELENA_SCREEN, "answers": md.ELENA_ANSWERS, "notes": md.ELENA_NOTES,
+                            "prints": md.ELENA_PRINTS},
                 "files": [{"id": f["id"], "name": f["name"]} for f in observe.CONTENT["machine"]["files"]]}
 
     def end(self):
