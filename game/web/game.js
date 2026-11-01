@@ -140,7 +140,7 @@ function drawRoom(ctx, id, camX, now, hover) {
       const oi = prop(ov.sprite);
       if (ready(oi)) ctx.drawImage(oi, x0 + ov.dx, y0 + ov.dy);
     }
-    if (hover && hover.id === o.id && o.outline) {
+    if (hover && hover.usable && hover.id === o.id && o.outline) {
       const ol = prop(o.sprite + "_outline");
       if (ready(ol)) ctx.drawImage(ol, x0 - 1, y0 - 1);
     }
@@ -149,12 +149,8 @@ function drawRoom(ctx, id, camX, now, hover) {
     if (!it.pos) continue;
     const img = prop(it.sprite);
     if (ready(img)) ctx.drawImage(img, it.pos[0], it.pos[1]);
-    if (hover && hover.id === it.id) {
-      const ol = prop(it.sprite + "_outline");
-      if (ready(ol)) ctx.drawImage(ol, it.pos[0] - 1, it.pos[1] - 1);
-    }
   }
-  if (hover && !hover.outline && hover.bounds) {
+  if (hover && hover.usable && !hover.outline && hover.bounds) {
     const [x0, y0, x1, y1] = hover.bounds;
     ctx.strokeStyle = "#d2e0fa";
     ctx.lineWidth = 1;
@@ -695,10 +691,7 @@ function onRoomClick(e) {
   const h = S.hover;
   if (!h) return;
   const card = CARD_FOR[h.kind] && $("signals").querySelector(`[data-card="${CARD_FOR[h.kind]}"]`);
-  if (!card) {
-    notice(`${h.text}. Only Marycel can touch it; you can reach her through the computer, speakers and printer.`);
-    return;
-  }
+  if (!card) return;  // only the computer, speakers and printer respond to a click
   card.classList.add("fresh");
   setTimeout(() => card.classList.remove("fresh"), 2500);
   card.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -713,11 +706,15 @@ function onHover(e) {
   const x = (e.clientX - rect.left) / k + camFor(S.active);
   const y = (e.clientY - rect.top) / k;
   S.hover = hitTest(S.active, x, y);
-  $("view").style.cursor = S.hover ? "pointer" : "default";
+  // Devices Elena reaches Marycel through get the outline, the hand cursor and a "click" label;
+  // anything else only gets a plain label saying what it is.
+  if (S.hover) S.hover.usable = !!CARD_FOR[S.hover.kind];
+  $("view").style.cursor = S.hover && S.hover.usable ? "pointer" : "default";
   const tip = $("tip");
   if (!S.hover) { tip.hidden = true; return; }
   tip.hidden = false;
-  tip.textContent = S.hover.text;
+  tip.classList.toggle("look", !S.hover.usable);
+  tip.textContent = S.hover.usable ? `Click to reach her · ${S.hover.text}` : S.hover.text;
   tip.style.left = (e.clientX - rect.left) + "px";
   tip.style.top = (e.clientY - rect.top - 8) + "px";
 }
