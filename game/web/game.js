@@ -1090,7 +1090,7 @@ function renderAsk(room, rt) {
     setTimeout(() => { if (S.active) renderPanel(); }, rt.answer.until - performance.now() + 50);
     return;
   }
-  banner.querySelector(".q").textContent = `${room.label}: Marycel asks you "${room.question}" She waits about ${CONSENT_WAIT_MS / 1000} seconds.`;
+  banner.querySelector(".q").textContent = `${room.label}: Marycel asks you "${room.question}" She waits about ${CONSENT_WAIT_MS / 1000} seconds. Yes only if it's your voice: check What happened.`;
   const s = S.signals.find((x) => x.id === "transfer_response");
   for (const c of s.choices) {
     const b = document.createElement("button");
@@ -1443,9 +1443,9 @@ function beginNight() {
 // The first time a night begins, a short tour: the night waits (paused) while a spotlight walks
 // through the five things a player needs. Skip ends it; Settings shows it again.
 const TOUR = [
-  ["#view", "This is Marycel", "She works on her own tonight. You can't move her; you can only reach her."],
+  ["#view", "This is Marycel", "She works on her own. Help her save the family video, then move your voice out. Careful: another voice, the Echo, is in the machine too."],
   ["#devices", "Reach her", "Click the computer, speakers or printer, here or in the room, and pick something she knows."],
-  [".panel", "Her side of things", "Her questions and their countdown, what she noticed, and What happened in this room."],
+  [".panel", "Before you say Yes", "Her questions show here with a countdown. Your voice is the stream whose outputs match the signals you sent: check What happened, here."],
   ["#previews", "Three rooms", "Two more Marycels live the same night. Click a picture to switch; a badge means one needs you."],
   [".bar-buttons", "Pause and Settings", "Pause any time to read. Settings has How to play, sound and End the night."],
 ];
