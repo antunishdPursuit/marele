@@ -76,6 +76,8 @@ function setRooms(rooms) {
 }
 
 function resetRooms(state) {
+  $("feedback").innerHTML = "";
+  $("subtitle").textContent = "";
   S.rooms = {}; S.order = []; S.rt = {}; S.ever = new Set();
   $("notice").textContent = "";
   setRooms(state.rooms);
@@ -452,6 +454,10 @@ async function perform(id, res) {
   checkUnlocks(id);
   if (id !== S.active) rt.unread++;
   if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", steps: after.steps };
+  // a line she said in her last few steps isn't shown or spoken again
+  const fresh = !!res.line && !(rt.lines || []).includes(res.line);
+  rt.lines = [...(rt.lines || []), res.line].slice(-4);
+  if (!fresh) res = { ...res, line: "" };
   rt.anim = res.refused ? restPose(rt, after) : animFor(after, res);
   rt.carry = { anim: rt.anim, from: before.marycel.holding_sprite, items: before.items, wearing: before.marycel.wearing };
   rt.t0 = performance.now();
@@ -461,7 +467,7 @@ async function perform(id, res) {
     if (res.refused) sfx("refused");
     else if (ACTION_SFX[act]) sfx(ACTION_SFX[act]);
     if ((res.noticed || []).some((n) => n.includes("quiet voice"))) sfx("echo");
-    Voice.say([res.line, !res.refused && act === "say_aloud" ? (res.step || {}).text : null]);
+    Voice.say([fresh ? res.line : null, !res.refused && act === "say_aloud" ? (res.step || {}).text : null]);
     updateMusic();
   }
   renderPanel();
@@ -472,7 +478,8 @@ async function perform(id, res) {
   rt.anim = restPose(rt, after);
   if (rt.sitting) rt.x = after.marycel.x;
   rt.t0 = performance.now();
-  if (after.world.transfer_consent === "asked" && !rt.askedAt) { rt.askedAt = performance.now(); rt.answer = null; }
+  const asked = !res.refused && (res.step || {}).action === "ask_before_transfer";
+  if (after.world.transfer_consent === "asked" && (asked || !rt.askedAt)) { rt.askedAt = performance.now(); rt.answer = null; }
   if (after.world.transfer_consent !== "asked") rt.askedAt = null;
 }
 
@@ -483,7 +490,7 @@ function showLine(id, res) {
   const who = document.createElement("span");
   who.className = "who";
   who.textContent = "Marycel: ";
-  sub.append(who, res.line || "...");
+  sub.append(who, res.line || (res.step && res.step.text ? "" : "..."));
   const st = res.step || {};
   if (!res.refused && st.text) {
     const said = document.createElement("span");
@@ -504,7 +511,7 @@ function showLine(id, res) {
 // until all of them have finished theirs (and the room on screen has finished speaking).
 async function runRounds(gen) {
   while (gen === S.generation) {
-    if (!S.started || S.paused || S.over) { await sleep(300); continue; }
+    if (!S.started || S.paused || S.over || typingHold()) { await sleep(300); continue; }
     const ready = S.order.filter((id) => !S.rooms[id].ended && !waitingForElena(id));
     if (!ready.length) { await sleep(300); continue; }
     const ok = await Promise.all(ready.map((id) => stepRoom(id, gen)));
@@ -514,6 +521,13 @@ async function runRounds(gen) {
     while (Voice.current && performance.now() < until && gen === S.generation) await sleep(150);
     await sleep(ROUND_GAP_MS);
   }
+}
+
+// While Elena is typing a message, Marycel waits for it (up to TYPING_HOLD_MS after the last key).
+const TYPING_HOLD_MS = 20000;
+function typingHold() {
+  const box = document.getElementById("screen-text");
+  return !!box && box.value.trim() !== "" && performance.now() - (S.typingAt || 0) < TYPING_HOLD_MS;
 }
 
 // After she asks about the transfer, her room sits out the rounds until Elena answers or time runs out.
@@ -538,7 +552,7 @@ async function stepRoom(id, gen) {
   // a step that lands while paused waits for play; after End it is not shown
   while (S.paused && !S.over && gen === S.generation) await sleep(200);
   if (gen !== S.generation || S.over) return true;
-  if (res.ended) { S.rooms[id].ended = true; roomEnded(id); return true; }
+  if (res.ended) { S.rooms[id].ended = true; roomEnded(id); renderPanel(); return true; }
   await perform(id, res);
   if (res.room.ended) roomEnded(id);
   return true;
@@ -612,9 +626,32 @@ function updatePreviews() {
     const st = b.querySelector(".st");
     st.textContent = room.ended ? "night over" : reply ? "Reply needed" : rt.unread ? `${rt.unread} unread` : "";
     st.className = `st${reply ? " urgent" : rt.unread && !room.ended ? " unread" : ""}`;
-    b.querySelector(".reach").textContent = room.ended ? "" : reachWords(room);
+    b.querySelector(".reach").textContent = room.ended ? "" : `${phaseWords(room)} · ${reachWords(room)}`;
     b.setAttribute("aria-label", [`Switch to ${room.label}`, st.textContent, b.querySelector(".reach").textContent].filter(Boolean).join(", "));
   }
+}
+
+// Where a room's night has got to, from the room's own state.
+function phaseWords(room) {
+  const w = room.world, pc = (room.objects.find((o) => o.id === "computer") || {}).state || {};
+  if (room.ended) return "night over";
+  if (w.transfer === "running" || w.transfer === "completed") return "moving a voice";
+  if (room.question) return "asking you about the voice";
+  if (["declined", "warned", "more_tests", "agreed", "no_answer"].includes(w.transfer_consent)) return "deciding after your answer";
+  if (w.selected_stream && w.selected_stream !== "none") return "choosing between two voices";
+  if (["active", "contained", "stirring"].includes(w.passage) || w.recovery === "completed") return "recovering the old drive";
+  if (w.recording_status !== "untouched" || w.video_copy !== "none") return "working on the family video";
+  if (pc.power === "on") return "looking through the computer";
+  return "getting started";
+}
+
+// The rules engine's refusals, in plainer words for the player ("the storage's open is yes").
+function readable(text) {
+  return String(text || "")
+    .replace(/the (\w[\w ]*?)'s open is yes/g, "the $1 is already open")
+    .replace(/the (\w[\w ]*?)'s open is no/g, "the $1 is closed")
+    .replace(/the (\w[\w ]*?)'s power is (on|off)/g, "the $1 is already $2")
+    .replace(/(\w[\w ]*?)'s (\w+) is (\w+)/g, "$1 ($2: $3)");
 }
 
 function reachWords(room) {
@@ -687,6 +724,35 @@ const UNLOCK_WORDS = {
 const UNLOCK_CARD = { long_note: "screen", highlight_file: "screen", request_pause: "screen",
                       play_fragment: "sound", print_message: "printer" };
 const TYPED_STEPS = 3;  // her typed question waits this many of her steps for an answer
+const ANSWER_WORDS = { YES: "agreed", NO: "declined", DANGER: "warned", "MORE TESTS": "more_tests", "MORE TEST": "more_tests" };
+// The words she was trained on: greetings and warnings, and answers to her questions.
+const KNOWN_WORDS = ["HELLO MARY", "IT'S ME", "TIA ELENA", "COPY FIRST", "DON'T RESET", "WAIT", "HELP"];
+const ANSWER_CHIPS = ["THE FLOWER", "FOLD IT BACK", "TORN PETAL", "I'M INSIDE", "IT'S ELENA"];
+
+function renderChips() {
+  const box = $("chips");
+  if (!box) return;
+  const asking = S.order.some((id) => S.rooms[id].question && !S.rooms[id].ended);
+  const words = asking ? ["YES", "NO", "DANGER", "MORE TESTS"] : typedWaiting().length ? ANSWER_CHIPS : KNOWN_WORDS;
+  const key = words.join("|");
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML = "";
+    for (const w of words) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = w;
+      b.addEventListener("click", () => {
+        $("screen-text").value = w;
+        $("screen-text").closest("form").requestSubmit();
+      });
+      box.append(b);
+    }
+  }
+  const live = S.started && !S.over && !S.paused && !S.sending && canSend(asking ? "transfer_response" : "screen_message");
+  box.querySelectorAll("button").forEach((b) => { b.disabled = !live; });
+}
 const ICONS = {
   screen: "M1 2h14v10H1zM3 4v6h10V4zM6 12h4v2h2v1H4v-1h2z",
   sound: "M2 6h3l3-3h2v10H8L5 10H2zM12 5h1v1h1v4h-1v1h-1v-1h1V6h-1z",
@@ -709,8 +775,15 @@ const canSend = (sid) => S.order.some((id) => !S.rooms[id].ended && (S.rooms[id]
 function typedWaiting() {
   return S.order.filter((id) => {
     const t = S.rt[id].typed, r = S.rooms[id];
-    return t && !r.ended && r.steps - t.steps < TYPED_STEPS;
+    return t && !r.ended && !r.question && r.steps - t.steps < TYPED_STEPS;
   });
+}
+
+// seconds left on a room's transfer question (the clock stands still while paused)
+function secondsLeft(id) {
+  const rt = S.rt[id];
+  if (!rt.askedAt) return Math.round(CONSENT_WAIT_MS / 1000);
+  return Math.max(0, Math.ceil((CONSENT_WAIT_MS - ((S.paused ? S.pausedAt : performance.now()) - rt.askedAt)) / 1000));
 }
 
 function icon(name) {
@@ -729,6 +802,7 @@ function buildSignals() {
         <button type="submit">Send</button>
       </div>
       <p class="card-sub" id="screen-count"></p>
+      <div class="chips" id="chips" aria-label="Words she knows"></div>
       <div class="sig-row" data-show="highlight_file">
         <select id="file-choice" aria-label="File to point to"></select>
         <button type="button" data-send="highlight_file">Point to this file</button>
@@ -762,12 +836,21 @@ function buildSignals() {
   $("print-text").maxLength = sigById("print_message").max_chars;
   const screenText = $("screen-text");
   screenText.addEventListener("input", () => {
+    S.typingAt = performance.now();
     updateSignalLocks();
   });
   box.querySelector('[data-card="screen"]').addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = screenText.value.trim(), short = sigById("screen_message").max_chars;
     if (!v) { notice("Type a few letters first."); screenText.focus(); return; }
+    // while she is asking about the transfer, a typed answer word is that answer
+    const words = v.toUpperCase().replace(/[^A-Z ]/g, " ").trim().split(/\s+/);
+    const answer = words.join(" ").startsWith("MORE TEST") ? "more_tests" : ANSWER_WORDS[words[0]];
+    if (answer && S.order.some((id) => S.rooms[id].question && !S.rooms[id].ended)) {
+      if (await sendSignal(sigById("transfer_response"), { name: "choice", value: answer })) screenText.value = "";
+      updateSignalLocks();
+      return;
+    }
     if (v.length > short && !canSend("long_note")) {
       notice(`The screen can only show ${short} letters right now.`);
       screenText.focus();
@@ -832,8 +915,12 @@ function updateSignalLocks() {
   input.maxLength = max;
   input.placeholder = `type up to ${max} letters`;
   input.disabled = input.nextElementSibling.disabled = !live || !screenOk;
+  const longIn = open.filter((id) => (S.rooms[id].signals_now || {}).long_note);
   $("screen-line").textContent = !screenOk ? "The computer is off." :
-    long ? "Repaired: longer messages work now." : "The screen is damaged: a few letters only.";
+    (!long ? "The screen is damaged: a few letters only." : longIn.length < open.length
+      ? `Longer notes work in: ${longIn.map((id) => S.rooms[id].label).join(", ")}; elsewhere a few letters.`
+      : "Repaired: longer notes work now.") +
+    " She knows the words below best; she can't hold a conversation.";
   $("screen-count").textContent = `${input.value.length} / ${max}`;
   $("screen-count").classList.toggle("bad", input.value.length > max);
   input.classList.toggle("shout", !long);
@@ -851,16 +938,23 @@ function updateSignalLocks() {
   $("printer-line").textContent = printOk ? "She reads it when she picks up the printout." :
     S.ever.has("print_message") ? "Not ready right now." : "Not working yet.";
 
+  renderChips();
+
   // her typed question, with the room it came from
   const typed = $("typed"), waiting = typedWaiting();
-  typed.hidden = !waiting.length;
-  typed.textContent = waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
-    (waiting.length ? " Your next screen message answers her." : "");
+  const asking = S.order.filter((id) => S.rooms[id].question && !S.rooms[id].ended);
+  typed.hidden = !waiting.length && !asking.length;
+  typed.textContent = asking.length
+    ? asking.map((id) => `${S.rooms[id].label} asks: "${S.rooms[id].question}" (${secondsLeft(id)} s)`).join(" ") +
+      " Answer with YES, NO, DANGER or MORE TESTS below the box. One answer reaches every room that asked."
+    : waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
+      (waiting.length ? " Answer with one of the words below the box." : "");
 }
+setInterval(() => { if (S.started && !S.over && S.order.some((id) => S.rooms[id].question)) updateSignalLocks(); }, 1000);
 
 const STATUS_WORDS = {
   noticed: ["ok", "she noticed"],
-  sent: ["warn", "sent, not noticed yet"],
+  sent: ["warn", "sent; she'll see it if she looks"],
   no_route: ["warn", "no way to reach her"],
   unavailable: ["bad", "not possible here"],
   ended: ["dim", "night over"],
@@ -951,7 +1045,7 @@ function renderPanel() {
       const said = st.text ? ` "${st.text}"` : "";
       li.innerHTML = `<span class="act"></span><span class="res"></span>`;
       li.children[0].textContent = `${e.n}. ${words}${said}`;
-      li.children[1].textContent = e.result;
+      li.children[1].textContent = readable(e.result);
       if (e.refused) li.children[1].classList.add("bad");
     }
     for (const n of e.noticed || []) {
@@ -1134,7 +1228,7 @@ function updateMusic() {
 const ENDINGS = {
   bridge: ["The bridge", "Marycel moved Elena's own voice to the new drive, after Elena said yes."],
   wrong_voice: ["The wrong voice", "The voice she moved was not Elena's. Something else got out of the machine."],
-  promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut, and they can still talk."],
+  promise: ["The promise", "Elena said no, so Marycel left her where she is. The way out stays shut."],
   recording_survives: ["The recording survives", "The family video is safe. Elena's voice is still inside the old computer."],
   unresolved: ["Unresolved", "The night ended before any voice was moved or the video was saved."],
   too_early: ["Over too soon", "The night ended before Marycel got far. Nothing was saved, and nothing was lost."],

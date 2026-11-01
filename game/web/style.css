@@ -110,6 +110,8 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 .sig-row .where { flex-basis: 100%; }
 #screen-text.shout { text-transform: uppercase; }
 .sig-row button, .sig-row input, .sig-row select { min-height: 32px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+.chip { font-size: 14px; padding: 1px 8px; border-color: color-mix(in srgb, var(--phosphor) 45%, var(--line)); }
 .typed { border: 2px solid var(--warn); background: rgba(224, 160, 80, .12); color: var(--warn); padding: 6px 8px; margin: 4px 0 8px; }
 .feedback { min-height: 1.2em; margin: 6px 0; }
 .feedback .r { display: block; }
