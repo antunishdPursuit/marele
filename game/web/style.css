@@ -15,7 +15,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
-body { font-family: "Pixelify Sans", ui-monospace, monospace; font-size: 17px; line-height: 1.3; }
+body { font-family: "Pixelify Sans", ui-monospace, monospace; font-size: 17px; line-height: 1.3;
+       font-variant-ligatures: none; }  /* the pixel font draws "fi" and "fl" as one odd glyph */
 h1, h2 { font-weight: normal; margin: 0; }
 /* Titles: Jacquard 24 is drawn on a 24 px grid, so keep it at 24 or 48. */
 h1, .card > h2, #room-title, .outcome .name { font-family: "Jacquard 24", serif; font-weight: 400; }
