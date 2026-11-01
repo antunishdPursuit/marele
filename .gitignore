@@ -19,3 +19,6 @@ assets/concept-art/
 reports/
 research_notes/
 timeline-preview-test.html
+
+# private working rules for Claude
+CLAUDE.local.md
