@@ -459,7 +459,7 @@ async function perform(id, res) {
   S.rooms[id] = after;
   checkUnlocks(id);
   if (id !== S.active) rt.unread++;
-  if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", steps: after.steps };
+  if (!res.refused && (res.step || {}).action === "type_message") rt.typed = { text: res.step.text || "", at: clock() };
   // a line she said in her last few steps isn't shown or spoken again
   const fresh = !!res.line && !(rt.lines || []).includes(res.line);
   rt.lines = [...(rt.lines || []), res.line].slice(-4);
@@ -529,10 +529,12 @@ async function runRounds(gen) {
   }
 }
 
-// After she asks about the transfer, her room sits out the rounds until Elena answers or time runs out.
+// After she asks about the transfer, or types a question on her screen, her room sits out the rounds
+// until Elena answers or time runs out.
 function waitingForElena(id) {
   const room = S.rooms[id], rt = S.rt[id];
-  return room.world.transfer_consent === "asked" && rt.askedAt && performance.now() - rt.askedAt < CONSENT_WAIT_MS;
+  return (room.world.transfer_consent === "asked" && rt.askedAt && performance.now() - rt.askedAt < CONSENT_WAIT_MS) ||
+    typedWaiting().includes(id);
 }
 
 async function stepRoom(id, gen) {
@@ -552,7 +554,7 @@ async function stepRoom(id, gen) {
   // a step that lands while paused waits for play; after End it is not shown
   while (S.paused && !S.over && gen === S.generation) await sleep(200);
   if (gen !== S.generation || S.over) return true;
-  if (res.ended) { S.rooms[id].ended = true; roomEnded(id); renderPanel(); return true; }
+  if (res.ended) { Object.assign(S.rooms[id], { ended: true, why_ended: res.why }); roomEnded(id); renderPanel(); return true; }
   await perform(id, res);
   if (res.room.ended) roomEnded(id);
   return true;
@@ -560,7 +562,8 @@ async function stepRoom(id, gen) {
 
 function roomEnded(id) {
   if (!S.order.every((x) => S.rooms[x].ended)) {
-    notice(`${S.rooms[id].label}: her night is over. The other rooms go on.`);
+    const why = S.rooms[id].why_ended;
+    notice(`${S.rooms[id].label}: her night is over${why ? `, because ${why}` : ""}. The other rooms go on.`);
   }
   checkOver();
 }
@@ -769,7 +772,7 @@ const UNLOCK_WORDS = {
 };
 const UNLOCK_CARD = { long_note: "screen", highlight_file: "screen", request_pause: "screen",
                       play_fragment: "sound", print_message: "printer" };
-const TYPED_STEPS = 3;  // her typed question waits this many of her steps for an answer
+const TYPED_WAIT_MS = 20000;  // after she types on her screen, her room waits this long for a reply
 // Elena says only what Marycel was trained on (the server sends the lists), so every word is
 // one she can react to. While she asks about the transfer: the four answers. After she types a
 // question: the answers she knows. Otherwise: the short screen messages she knows.
@@ -824,9 +827,11 @@ const canSend = (sid) => S.order.some((id) => !S.rooms[id].ended && (S.rooms[id]
 function typedWaiting() {
   return S.order.filter((id) => {
     const t = S.rt[id].typed, r = S.rooms[id];
-    return t && !r.ended && !r.question && r.steps - t.steps < TYPED_STEPS;
+    // only while a reply can reach her screen, so a room never waits for an answer it can't get
+    return t && !r.ended && !r.question && (r.signals_now || {}).answer_typed && clock() - t.at < TYPED_WAIT_MS;
   });
 }
+const typedLeft = (id) => Math.max(0, Math.ceil((TYPED_WAIT_MS - (clock() - S.rt[id].typed.at)) / 1000));
 
 // seconds left on a room's transfer question (the clock stands still while paused)
 function secondsLeft(id) {
@@ -926,8 +931,15 @@ function updateSignalLocks() {
   }
 
   // Screen: her trained words as buttons; longer notes once diagnostics repair it
+  // her question heads the computer's menu, so the menu never hides it
+  const asks = S.order.filter((id) => S.rooms[id].question && !S.rooms[id].ended), types = typedWaiting();
   $("screen-line").textContent = !canSend("screen_message") ? "The computer is off." :
+    asks.length ? asks.map((id) => `${S.rooms[id].label} asks: "${S.rooms[id].question}" (${secondsLeft(id)} s)`).join(" ") +
+      " Answer below." :
+    types.length ? types.map((id) => `${S.rooms[id].label}: she typed "${S.rt[id].typed.text}" (${typedLeft(id)} s)`).join(" ") +
+      " Answer with a word she knows." :
     "Choose what appears on her screen. These are the words she knows; she can't hold a conversation.";
+  $("screen-line").classList.toggle("asking", asks.length + types.length > 0);
 
   // Sound: in each room the crackle gives way to the recording once she has played it
   const tone = box.querySelector('[data-show="tone"]'), frag = box.querySelector('[data-show="play_fragment"]');
@@ -952,10 +964,12 @@ function updateSignalLocks() {
   typed.textContent = asking.length
     ? asking.map((id) => `${S.rooms[id].label} asks: "${S.rooms[id].question}" (${secondsLeft(id)} s)`).join(" ") +
       " Click the computer to answer YES, NO, DANGER or MORE TESTS. One answer reaches every room that asked."
-    : waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}".`).join(" ") +
+    : waiting.map((id) => `${S.rooms[id].label}: Marycel typed "${S.rt[id].typed.text}" (${typedLeft(id)} s).`).join(" ") +
       (waiting.length ? " Click the computer to answer with a word she knows." : "");
 }
-setInterval(() => { if (S.started && !S.over && S.order.some((id) => S.rooms[id].question)) updateSignalLocks(); }, 1000);
+setInterval(() => {
+  if (S.started && !S.over && (S.order.some((id) => S.rooms[id].question) || typedWaiting().length)) updateSignalLocks();
+}, 1000);
 
 const STATUS_WORDS = {
   noticed: ["ok", "she noticed"],
@@ -1286,7 +1300,8 @@ async function showEnding() {
     div.querySelector(".name").textContent = name;
     div.querySelector("p").textContent = text;
     for (const f of [FACT_WORDS.video[o.video], FACT_WORDS.passage[o.passage], streamWord,
-                     CHOICE_WORDS[o.consent] ? `your answer: ${CHOICE_WORDS[o.consent]}` : CONSENT_WORDS[o.consent] || o.consent.replace(/_/g, " "), `${o.steps} steps`]) {
+                     CHOICE_WORDS[o.consent] ? `your answer: ${CHOICE_WORDS[o.consent]}` : CONSENT_WORDS[o.consent] || o.consent.replace(/_/g, " "), `${o.steps} steps`,
+                     o.why ? `the night ended because ${o.why}` : null].filter(Boolean)) {
       const li = document.createElement("li");
       li.textContent = f;
       div.querySelector("ul").append(li);

@@ -177,6 +177,7 @@ canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: bloc
 .dialog p { margin: 8px 0; }
 .tips { margin: 0 0 8px; padding-left: 20px; }
 .tips li { margin: 5px 0; font-size: 15px; }
+#screen-line.asking { color: var(--warn); }
 .goal { font-size: 18px; margin: 0 0 12px; }
 .how-lead { margin: 4px 0 6px; }
 .faq details { border-top: 1px solid var(--line); }

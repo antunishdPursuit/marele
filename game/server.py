@@ -151,6 +151,7 @@ class Room:
         self.heard = 0            # things that reached her since her last step
         self.silences = 0         # transfer questions that went unanswered
         self.paused = False       # the player paused the night: a step that lands meanwhile never happens
+        self.why_ended = None     # in plain words, for the player
         self.log: list[dict] = []  # what the player sees: her steps, lines and what reached her
 
     # ---------------- Marycel
@@ -168,9 +169,9 @@ class Room:
                 self.w.game_event("consent_timeout")
                 self.silences += 1
                 if self.silences >= MAX_SILENCES:
-                    self.ended = True
+                    self.ended, self.why_ended = True, "three of her questions went unanswered"
                     night_log("ended", self, reason="no answer to her question", outcome=self.outcome())
-                    return {"ended": True}
+                    return {"ended": True, "why": self.why_ended}
                 waited = "You wait. Nothing appears on the screen."
                 self.mem.record({"action": "wait"}, waited)
                 self.mem.now = [waited]
@@ -219,12 +220,15 @@ class Room:
                  "result": result, "refused": refused, "noticed": noticed}
         self.log.append(entry)
         recent = [e["step"].get("action") for e in self.log if "step" in e][-LOOP_WINDOW:]  # her steps only
-        if (w.world["transfer"] == "completed" or self.steps >= MAX_STEPS
-                # after a no, her note closes the night (as in training)
-                or (s.get("action") == "write_note" and not refused and w.world["transfer_consent"] == "declined")
-                # she is going round in circles
-                or (len(recent) == LOOP_WINDOW and len(set(recent)) <= 2)):
-            self.ended = True
+        if w.world["transfer"] == "completed":
+            self.why_ended = "a voice was moved"
+        elif s.get("action") == "write_note" and not refused and w.world["transfer_consent"] == "declined":
+            self.why_ended = "she left you a note after your No"  # as in training, her note closes the night
+        elif len(recent) == LOOP_WINDOW and len(set(recent)) <= 2:
+            self.why_ended = "she kept going round in circles, repeating the same steps"
+        elif self.steps >= MAX_STEPS:
+            self.why_ended = f"she reached the night's limit of {MAX_STEPS} steps"
+        self.ended = self.why_ended is not None
         night_log("step", self, n=self.steps, action=s.get("action"), target=s.get("target"),
                   text=s.get("text"), line=s.get("line", ""), refused=refused, result=result[:200],
                   noticed=noticed, arrived=list(arrived), ended=self.ended)
@@ -296,7 +300,7 @@ class Room:
         return {"key": key, "echo": bool(sum(w.outputs["echo"].values())),  # did the Echo ever make a sound
                 "video": world["video_copy"], "passage": world["passage"],
                 "stream": world["selected_stream"], "elena_stream": self.w.room["hidden"]["elena_stream"],
-                "consent": world["transfer_consent"], "steps": self.steps}
+                "consent": world["transfer_consent"], "steps": self.steps, "why": self.why_ended}
 
     def signals_now(self) -> dict:
         """Which of Elena's signals would go through in this room right now. The same unlock and
@@ -359,7 +363,7 @@ class Room:
             "question": self.question if w.world["transfer_consent"] == "asked" else None,
             "unlocked": {k: w.unlocked(k) for k in CATALOG["unlocks"]},
             "signals_now": (now := self.signals_now()), "reach": self.reach(now),
-            "sound_route": observe.audible_route(w), "steps": self.steps, "ended": self.ended,
+            "sound_route": observe.audible_route(w), "steps": self.steps, "ended": self.ended, "why_ended": self.why_ended,
             "outcome": self.outcome() if self.ended else None,
             "log": self.log[-40:],
         }
@@ -403,6 +407,7 @@ class Game:
             with r.lock:
                 if not r.ended:
                     night_log("ended", r, reason="the player ended the night", outcome=r.outcome())
+                    r.why_ended = "you ended the night"
                 r.ended = True
 
 
