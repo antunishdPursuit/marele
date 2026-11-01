@@ -20,11 +20,28 @@ Hosted copy: with `MARYCEL_BACKEND=tinker` and `TINKER_API_KEY` set, the server 
 Sound: effects are synthesized in the browser (`game/web/sound.js`; try them at `/game/web/sound-test.html`). Music is generated offline with ACE-Step 1.5 (MIT code and weights) by `tools/make_music.py`, run with ACE-Step's own Python (installed separately, outside this repository): each room has its own theme (repair shop: ofrenda, electronics workshop: workshop, family home: home), the eerie passage music plays while the passage stirs in the room on screen, and morning plays over the endings. Each theme is a playlist of four one-minute takes in `game/web/audio/music/`; prompts and seeds are logged in `game/web/audio/takes/log.jsonl`, credits in `game/web/audio/CREDITS.md`.
 
 Marycel's voice is recorded ahead of play, not generated live: `tools/record_voice.py lines` collects every line she knows (from the training data and the trained model's test replies), and `tools/record_voice.py kokoro`, run with a separate Kokoro environment (Apache-2.0), speaks them all in one preset voice (af_heart), so every line sounds like the same person. Only the room on screen speaks; a line without a recording stays a subtitle.
+
+## What fine-tuning changed
+
+Scored with `tools/score_steps.py` on the 394 held-out steps that still apply under the final rules (none of them seen in training):
+
+| | Qwen3-8B, untrained | `marycel-v2` on Tinker |
+|---|---|---|
+| Steps the rules accept | 64.2% | 99.2% |
+| Same action as the reference step | 26.6% | 75.6% |
+| Tried to move a voice without Elena's yes | 23 | 0 |
+
+The local Q5_0 copy in Ollama scores 99.5% valid, 75.6% same action and 0 transfers without a yes on the same steps.
+
+## Showcase video
+
+A 1.5-minute video introduces the game: Elena's story, one signal reaching all three rooms, the Echo, Marycel asking before she moves a voice (real gameplay recorded on marele.tech), what fine-tuning changed, and the morning screen. It was made outside this repository with HyperFrames, from the game's own rooms, props, Marycel's sprite animations, music and sound effects, plus two story stills. Elena narrates in Spanish and English (Kokoro, preset voice ef_dora) with English subtitles; Marycel's lines are her in-game recordings.
+
 ## Character sprites
 
 `tools/build_character_sprites.py` turns the two Marycel character sheets (star sweater, green cardigan) into animation-ready sprites in `assets/sprites/marycel/`:
 
-- Animations: `idle`, `walk` (4-frame loop), `pickup` (kneel, reach, stand), `pickup_and_read`, `read`, `sit_type`.
+- Animations: `idle`, `walk` (4-frame loop), `pickup` (kneel, reach, stand), `pickup_and_read`, `read`, `sit_type`, `pull_chair`, `sit_down`, `stand_up`, `sit_idle`, `sit_reach`, `reach_desk`, `look_out`, `hold`, `inspect`, `write`, `headphones`, `kneel`.
 - Two scales: `hd` (320 px tall, a smooth reference) and `native` (110 px tall, the game asset on the shared pixel grid and palette).
 - Each animation has a horizontal sheet (`walk.png`), single frames in `frames/`, and a `*_preview.gif`.
 - `manifest.json` lists cell size, the foot origin (place it on the floor point), frame durations, looping, and gameplay events (`pickup` fires `grab` on frame 5 and `item_in_hand` on frame 7). Sprites face right; mirror them to face left.
@@ -62,3 +79,4 @@ The code in this repository is MIT-licensed (see `LICENSE`). Everything it build
 - Marycel's voice: Kokoro 82M (Apache-2.0), preset voice af_heart, the same voice for every line; not a clone of anyone.
 - Title and morning screen backgrounds (`assets/screens/`): painted with OpenAI image generation, then prepared by `tools/build_screens.py`. The game draws the text, buttons and room snapshots on top.
 - Fonts: SIL Open Font License; license texts are in `game/web/fonts/`.
+- Showcase video: Elena's narration with Kokoro 82M (Apache-2.0, preset voice ef_dora); the two story stills made with OpenAI image generation. The video's files are not part of this repository.
