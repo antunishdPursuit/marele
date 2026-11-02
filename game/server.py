@@ -77,8 +77,8 @@ class OutOfBudget(Exception):
 
 class Budget:
     """Steps the hosted copy may ask Tinker for today (resets at midnight UTC). With KEY_VALUE_URL
-    the count lives in that store, so a restart or a sleeping server doesn't reset it; while the
-    store can't be reached, a count in memory takes over."""
+    the count lives in that store, so a restart or a sleeping server doesn't reset it. Paid
+    calls stop while the store is unavailable; local inference may count in memory."""
 
     def __init__(self, limit: int, url: str | None = None):
         self.limit, self.day, self.used, self.lock = limit, "", 0, threading.Lock()
@@ -97,10 +97,13 @@ class Budget:
                 return self._check(used)
             except OutOfBudget:
                 raise
-            except Exception as e:  # unreachable: say so once, then count in memory meanwhile
+            except Exception as e:
                 if not self.store_down:
-                    print(f"step budget store unavailable ({type(e).__name__}); counting in memory", file=sys.stderr)
+                    print(f"step budget store unavailable ({type(e).__name__}); paid calls paused", file=sys.stderr)
                 self.store_down = True
+                raise OutOfBudget("The shared step budget is unavailable. Please try again later.") from e
+        if BACKEND == "tinker":
+            raise OutOfBudget("The shared step budget is not configured. Please try again later.")
         with self.lock:
             if today != self.day:
                 self.day, self.used = today, 0
