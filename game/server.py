@@ -59,6 +59,8 @@ MAX_GAMES = int(os.environ.get("MAX_GAMES", "40"))             # nights kept in 
 NEW_GAMES_PER_DAY = int(os.environ.get("NEW_GAMES_PER_DAY", "25"))  # per visitor address
 IDLE_SECONDS = 30 * 60                                          # a night nobody touches is dropped
 MAX_SILENCES = 3                                                # unanswered transfer questions before her night ends
+MAX_REQUEST_BYTES = 16 * 1024
+BODY_READ_TIMEOUT = 10
 NIGHT_LOG = os.environ.get("NIGHT_LOG", "1") != "0"             # one JSON line per step, signal and ending
 WEB = ROOT / "game" / "web"
 ROOMS = md.ROOMS
@@ -73,6 +75,12 @@ TINKER_SLOTS = threading.BoundedSemaphore(8)
 
 class OutOfBudget(Exception):
     pass
+
+
+class InvalidRequest(ValueError):
+    def __init__(self, message, status=400):
+        super().__init__(message)
+        self.status = status
 
 
 class Budget:
@@ -490,8 +498,45 @@ class Handler(SimpleHTTPRequestHandler):
         return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
 
     def _body(self):
-        n = int(self.headers.get("Content-Length") or 0)
-        return json.loads(self.rfile.read(n) or b"{}")
+        if self.headers.get_all("Transfer-Encoding"):
+            raise InvalidRequest("Transfer-Encoding is not supported.")
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) > 1:
+            raise InvalidRequest("Content-Length must appear only once.")
+        length = lengths[0].strip() if lengths else "0"
+        if not length.isascii() or not length.isdecimal():
+            raise InvalidRequest("Content-Length must be a nonnegative integer.")
+        if len(length) > 10 or int(length) > MAX_REQUEST_BYTES:
+            raise InvalidRequest("Request body is too large.", 413)
+        n = int(length)
+        previous_timeout = self.connection.gettimeout()
+        deadline = time.monotonic() + BODY_READ_TIMEOUT
+        try:
+            chunks, remaining_bytes = [], n
+            while remaining_bytes:
+                remaining_time = deadline - time.monotonic()
+                if remaining_time <= 0:
+                    raise TimeoutError()
+                self.connection.settimeout(remaining_time)
+                chunk = self.rfile.read1(min(remaining_bytes, 8192))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining_bytes -= len(chunk)
+            raw = b"".join(chunks)
+        except TimeoutError:
+            raise InvalidRequest("Request body timed out.", 408) from None
+        finally:
+            self.connection.settimeout(previous_timeout)
+        if len(raw) != n:
+            raise InvalidRequest("Request body is incomplete.")
+        try:
+            body = json.loads(raw or b"{}")
+        except (ValueError, RecursionError):
+            raise InvalidRequest("Request body must be a JSON object.") from None
+        if not isinstance(body, dict):
+            raise InvalidRequest("Request body must be a JSON object.")
+        return body
 
     def send_head(self):
         """Static files with HTTP Range support, so the browser can seek in music and knows its length."""
@@ -568,6 +613,9 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/end":
                 game.end()
                 return self._json(game.state())
+        except InvalidRequest as e:
+            self.close_connection = True
+            return self._json({"error": str(e)}, e.status)
         except OutOfBudget as e:
             return self._json({"error": str(e)}, 429)
         except urllib.error.HTTPError as e:
